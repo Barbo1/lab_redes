@@ -20,7 +20,6 @@ class Server:
 
             # estraccion de data
             data_devuelta = conn.recv(self.buffer_receptor).decode()
-            print(data_devuelta)
             data_procesada = json.loads(data_devuelta)
             args = data_procesada["params"]
             method = data_procesada["method"]
@@ -50,7 +49,7 @@ def suma(a, b):
 def multiplicacion(a, b):
     return a * b
 
-server = Server("127.0.0.1", 2000)
+server = Server("127.0.0.1", 5000)
 server.add_method(suma)
 server.add_method(multiplicacion)
 server.serve()

@@ -47,12 +47,12 @@ class Client:
 def connect(address: str, port: int) -> Client:
     return Client(address, port)
 
-conn = connect('127.0.0.1', 2000)
+conn = connect('127.0.0.1', 5000)
 resultado = conn.suma(5, 4)
 print(resultado)
 resultado = conn.multiplicacion(5, 4)
 print(resultado)
-conn.close()
+conn.close() # Para que si cerras el sock en el mismo metodo???
 
 
 
