@@ -20,14 +20,11 @@ class Client(object):
                 raise Exception("Socket no encontrado.")
 
     def __init__(self, address, port):
-        # crear un socket que conecte con el servidor
-        # se guarda en sock
         self.sock = socket(AF_INET, SOCK_STREAM)
         self.sock.connect((address, port))
         pass
     
     def __getattr__(self, method):
-        # pedido de info al servidor
         return self.Client_call_ret(self.sock)
 
     def __del__(self):
