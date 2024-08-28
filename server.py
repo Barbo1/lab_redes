@@ -1,22 +1,26 @@
 from socket import *
 import json
 
-class Server(object):
-    sock = None
-    exit = True
+class Server:
     buffer_receptor = 1024
 
     def __init__(self, address, port):
+        self.address=address
+        self.port=port
         self.sock = socket(AF_INET, SOCK_STREAM)
         self.sock.bind((address, port))
         self.sock.listen(1)
+        self.exit= True
 
     def serve(self):
-        while exit:
-            conn, _ = self.sock.accept()
+        print(f"Servidor escuchando en {self.address}:{self.port}")
+        while self.exit:
+            conn, client = self.sock.accept()
+            print(f"Conexión aceptada de {client}")
 
             # estraccion de data
             data_devuelta = conn.recv(self.buffer_receptor).decode()
+            print(data_devuelta)
             data_procesada = json.loads(data_devuelta)
             args = data_procesada["params"]
             method = data_procesada["method"]
@@ -37,9 +41,8 @@ class Server(object):
     def add_method(self, function):
         setattr(self, function.__name__, function)
 
-    def shutdown():
+    def shutdown(self):
         self.exit = False
-
 
 def suma(a, b):
     return a + b
@@ -47,7 +50,7 @@ def suma(a, b):
 def multiplicacion(a, b):
     return a * b
 
-serv = Server("127.0.0.1", 33333)
-serv.add_method(suma)
-serv.add_method(multiplicacion)
-serv.serve()
+server = Server("127.0.0.1", 2000)
+server.add_method(suma)
+server.add_method(multiplicacion)
+server.serve()
