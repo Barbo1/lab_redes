@@ -22,10 +22,8 @@ class Client_call_ret(object):
         elif self.method == "":
             raise Exception("No hay nomber para el metodo.")
         else:
-            self.client_father.sock = socket(AF_INET, SOCK_STREAM)
-            self.client_father.sock.connect(
-                    (self.client_father.address, self.client_father.port)
-                )
+            sock = socket(AF_INET, SOCK_STREAM)
+            sock.connect((self.client_father.address, self.client_father.port))
             data_a_enviar = {
                     "jsonrpc": self.client_father.jsonrpc_version,
                     "method": self.method,
@@ -33,20 +31,19 @@ class Client_call_ret(object):
                     "id": generador_de_ids()
                 }
             data_encoded = json.dumps(data_a_enviar).encode()
-            self.client_father.sock.send(data_encoded)
+            sock.send(data_encoded)
 
-            data_recivida = self.client_father.sock.recv(
-                    self.client_father.buffer_receptor
-                )
+            data_recivida = sock.recv(
+                self.client_father.buffer_receptor
+            )
             data_procesada = json.loads(data_recivida.decode())
-            data_procesada = data_procesada["result"]
-            self.client_father.sock.close()
+            # data_procesada = data_procesada["result"]
+            sock.close()
 
             return data_procesada
 
 
 class Client(object):
-    sock = None
     jsonrpc_version = "2.0"
     buffer_receptor = 1024
     address = 0
@@ -64,8 +61,12 @@ def connect(address: str, port: int) -> Client:
     return Client(address, port)
 
 
-conn = connect("127.0.0.1", 33333)
+conn = connect("127.0.0.1", 33342)
 resultado = conn.multiplicacion(5, 4)
 print(resultado)
 resultado = conn.suma(2, 3)
+print(resultado)
+resultado = conn.division(3, 2)
+print(resultado)
+resultado = conn.suma([], "a")
 print(resultado)
