@@ -7,6 +7,13 @@ def generador_de_ids():
     return random.randint(0, 10000000000000)
 
 
+class ClientException(Exception):
+    def __init__(self, message: str, code: int):
+        self.message = message
+        self.code = code
+        super().__init__("")
+
+
 class Client(object):
     jsonrpc_version = "2.0"
     buffer_receptor = 1024
@@ -18,19 +25,23 @@ class Client(object):
         self.port = port
 
     def __getattr__(self, method: str) -> callable:
+        if method == "":
+            raise AttributeError("No hay nombre para el metodo.")
+
         def ret(*args, **keys):
-            if method == "":
-                raise AttributeError("No hay nombre para el metodo.")
-            elif self.address is None:
+            if self.address is None:
                 raise TypeError("Direccion no encontrada.")
             elif self.address is None:
                 raise TypeError("Puerto no encontrada.")
             else:
 
-                # tirar error en caso de que no se tengan los argumentos
-                # keyword correctamente escritos.
-                if len(keys) > 1 or (len(keys) == 1 and "Notify" not in keys):
-                    raise KeyError("Los argumentos Keyword estan mal escritos.")
+                # validar que los argumentos sean todos nombrados o sin nombre
+                if (len(args) == 0) == (len(keys) == 0):
+                    raise TypeError("Los parametros no estan correctamente ingresados.")
+                elif len(keys) != 0:
+                    params = dict(keys)
+                elif len(args) != 0:
+                    params = list(args)
 
                 # validacion de notificacion
                 noti = False
@@ -44,9 +55,8 @@ class Client(object):
                 data = {}
                 data["jsonrpc"] = self.jsonrpc_version
                 data["method"] = method
-                args = list(args)
-                if len(args) > 0:
-                    data["params"] = args
+                if len(params) > 0:
+                    data["params"] = params
                 if not noti:
                     data["id"] = generador_de_ids()
 
@@ -56,21 +66,34 @@ class Client(object):
 
                 # procesamiento y envio de datos.
                 data = json.dumps(data)
+
+                print("CLIENT | REQUEST: " + data)
+
                 data = data.encode()
                 sock.sendall(data)
 
                 # retorno de datos.
+                raise_exep = False
                 if not noti:
                     data = sock.recv(self.buffer_receptor)
                     data = data.decode()
+
+                    print("CLIENT | RESPONSE: " + data)
+
                     data = json.loads(data)
-                else:
-                    data = None
+
+                    if "error" in data:
+                        raise_exep = True
 
                 # cierre de socket cliente.
                 sock.close()
 
-                return data
+                if raise_exep:
+                    raise ClientException(data["error"]["message"], data["error"]["code"])
+                elif not noti:
+                    return data["result"]
+                else:
+                    return None
         return ret
 
 

@@ -1,9 +1,4 @@
 __all__ = ["client", "server"]
 
-from . import client
-from . import server
-
-client.Client
-client.connect
-
-server.Server
+from .client import connect
+from .server import Server
