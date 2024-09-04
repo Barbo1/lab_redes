@@ -1,6 +1,6 @@
 from jsonrpc_redes import connect
 
-conn = connect("127.0.0.1", 10110)
+conn = connect("192.168.1.9", 10101)
 m = conn.multiplicacion(4, 5)
 assert m == 20
 print("Test simple completado.")

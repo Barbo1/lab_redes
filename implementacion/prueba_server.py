@@ -13,7 +13,7 @@ def suma(a, b):
     return a + b
 
 
-server = Server(("127.0.0.1", 10110))
+server = Server(("192.168.1.9", 10101))
 server.add_method(multiplicacion)
 server.add_method(suma, "sum")
 server.serve()
