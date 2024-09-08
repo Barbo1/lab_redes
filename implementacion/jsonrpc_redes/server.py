@@ -12,7 +12,7 @@ def get_json_rpc_right(result, id: int) -> dict:
 
 # funcion que retorna un json rpc erroneo con el codigo y mensaje
 # de error correspondiente.
-def get_json_rpc_error(code: int = None) -> dict:
+def get_json_rpc_error(code: int = None, id: int = None) -> dict:
     if code == -32700:
         message = "Parse error"
     elif code == -32600:
@@ -27,21 +27,32 @@ def get_json_rpc_error(code: int = None) -> dict:
     return {
         "jsonrpc": VERSION_JSON_RPC,
         "error": {"code": code, "message": message},
-        "id": "null"
+        "id": id
     }
 
 
 # valida que el objeto json es json rpc correctamente estructurado.
 def validate_json_rpc(json: dict) -> bool:
     if type(json) is dict:
-        if "jsonrpc" in json and json["jsonrpc"] == VERSION_JSON_RPC and "method" in json and type(json["method"]) is str:
+        if (
+            "jsonrpc" in json and json["jsonrpc"] == VERSION_JSON_RPC and
+            "method" in json and type(json["method"]) is str
+        ):
             args = list(json.keys())
             args.remove("jsonrpc")
             args.remove("method")
             if len(args) == 2:
-                return "id" in args and "params" in args and type(json["params"]) is list or dict
+                return (
+                    "id" in args and
+                    "params" in args
+                    and type(json["params"]) is list or dict
+                )
             if len(args) == 1:
-                return "id" in args or "params" in args and type(json["params"]) is list or dict
+                return (
+                    "id" in args or
+                    "params" in args and
+                    type(json["params"]) is list or dict
+                )
             if len(args) == 0:
                 return True
     return False
@@ -50,7 +61,8 @@ def validate_json_rpc(json: dict) -> bool:
 class Server(object):
     sock = None                 # socket mediante el cual acepta conexiones.
     queue_length = 5            # nombre de mensajes que pueden haber en la cola de entrada.
-    buffer_receptor = 1024      # largo del buffer que acepta un mensaje.
+    buffer_receptor = 64        # largo del buffer que acepta un mensaje.
+    S = 0.0009                  # Tiempo en milisegundos que espera antes de retornar timeout.
 
     def __init__(self, info: tuple[str, int]):
         self.sock = socket(AF_INET, SOCK_STREAM)
@@ -59,62 +71,84 @@ class Server(object):
 
     def handler(self, conn):
 
+        # crear una funcion de validacion de que recorra el string para validar el json.
+        # la funcion debe recorrer el string y sumar a un contador +1 para si encuentra 
+        # un "{" que no este dentro de un string, y -1 para si encuentra "}". Si el 
+        # contador llega a 0 y no existe ningun caracter luego del ultimo "}", se prueba
+        # convertir con la funcionalidad json.loads.
+
         # recepcion de datos
-        data = conn.recv(self.buffer_receptor)
-        data = data.decode()
-
+        data = ""
         try:
+            conn.settimeout(self.S)
+            while True:
+                res = conn.recv(self.buffer_receptor).decode()
+                if not res:
+                    break
+                data += res
+        except Exception:
+            pass
 
-            # validar que los datos recivios representen un json.
-            try:
-                json_rpc = json.loads(data)
-            except json.decoder.JSONDecodeError:
-                data = get_json_rpc_error(-32700)
-            else:
+        # validar que los datos recivios representen un json.
+        try:
+            json_rpc = json.loads(data)
+        except json.decoder.JSONDecodeError:
+            data = get_json_rpc_error(-32700)
+        else:
 
-                # validar que el json sea un json rpc.
-                if validate_json_rpc(json_rpc):
+            # validar que el json sea un json rpc.
+            if validate_json_rpc(json_rpc):
 
-                    # validar que el metodo exista.
+                id = json_rpc["id"] if "id" in json_rpc else None
+
+                # validar que el metodo exista.
+                try:
+                    method = json_rpc["method"]
+                    method = getattr(self, method)
+                except AttributeError:
+                    data = get_json_rpc_error(-32601, id)
+                else:
+
+                    # validar que se puede obtener el resultado.
                     try:
-                        method = json_rpc["method"]
-                        method = getattr(self, method)
-                    except AttributeError:
-                        data = get_json_rpc_error(-32601)
+                        args = json_rpc["params"] if "params" in json_rpc else []
+                        result = method(*args) if type(args) is list else method(**args)
+                    except TypeError:
+                        data = get_json_rpc_error(-32602, id)
+                    except Exception:
+                        data = get_json_rpc_error(-32603, id)
                     else:
 
-                        # validar que se puede obtener el resultado.
-                        try:
-                            args = json_rpc["params"] if "params" in json_rpc else []
-                            result = method(*args) if type(args) is list else method(**args)
-                        except TypeError:
-                            data = get_json_rpc_error(-32602)
+                        # retorna mensaje en caso de que no sea un notifiación.
+                        if id is not None:
+                            data = get_json_rpc_right(result, json_rpc["id"])
                         else:
+                            data = None
 
-                            # retorna mensaje en caso de que no sea un notifiación.
-                            if "id" in json_rpc:
-                                data = get_json_rpc_right(result, json_rpc["id"])
-                            else:
-                                data = None
+            else:
+                data = get_json_rpc_error(-32600)
 
-                else:
-                    data = get_json_rpc_error(-32600)
-
-        except Exception:
-            data = get_json_rpc_error(-32603)
-
-        # envio de resultado
+        # envio de data
         if data is not None:
-            data = json.dumps(data)
-            data = data.encode()
-            conn.sendall(data)
+            conn.settimeout(self.S)
+            # procesamiento y envio de datos.
+            try:
+                data = json.dumps(data)
+                data = data.encode()
+                size = 0
+                msglen = len(data)
+                while size < msglen:
+                    size += conn.send(data[size:])
+            except Exception:
+                pass
         conn.close()
 
     def serve(self):
-        while exit:
+        while True:
             try:
                 conn, _ = self.sock.accept()
-                Thread(target=self.handler, args=(conn, )).start()
+                th = Thread(target=self.handler, args=(conn, ))
+                th.start()
             except KeyboardInterrupt:
                 return
 

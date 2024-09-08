@@ -1,23 +1,31 @@
 from jsonrpc_redes import Server
 
 
-def multiplicacion(a, b):
-    return a*b
+# Esta función esta pensada para realizar multiplicaciones de dos numeros pero,
+# en un principio puede utilizarse para cualquier par de operadores que puedan
+# relizar esta operación.
+def multiplicacion(operando_1, operando_2):
+    return operando_1 * operando_2
 
 
-def suma(a, b):
-    if type(a) is not int and type(b) is not int:
+# Realiza la suma de dos enteros. En caso de que los parametros no correspondan
+# a enteros, ser retornara un error.
+def suma(operando_1: int, operando_2: int):
+    if type(operando_1) is not int:
         raise TypeError
-    return a + b
+    if type(operando_2) is not int:
+        raise TypeError
+    return operando_1 + operando_2
 
 
-def muliplicar_second(a, b):
-    return a[1]*b
+# Toma un arreglo de elementos y otro elemento aparte, y retorna la
+# multiplicacion del segundo elemento de la lista por el elemento
+def muliplicar_second(lista: list, operando):
+    return lista[1] * operando
 
 
-port = 10103
-host = "192.168.1.9"
-
+port = 10106
+host = "0.0.0.0"
 
 server = Server((host, port))
 server.add_method(multiplicacion)

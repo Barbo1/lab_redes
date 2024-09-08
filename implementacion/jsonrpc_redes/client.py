@@ -16,9 +16,11 @@ class ClientException(Exception):
 
 class Client(object):
     jsonrpc_version = "2.0"
-    buffer_receptor = 1024
+    buffer_receptor = 64
     address = None
     port = None
+    C1 = 0.0009
+    C2 = 0.1236
 
     def __init__(self, address: str, port: int):
         self.address = address
@@ -29,71 +31,92 @@ class Client(object):
             raise AttributeError("No hay nombre para el metodo.")
 
         def ret(*args, **keys):
+            noti = False
+
+            # validación de parametros
             if self.address is None:
                 raise TypeError("Direccion no encontrada.")
-            elif self.address is None:
+
+            elif self.port is None:
                 raise TypeError("Puerto no encontrada.")
-            else:
 
-                # validar que los argumentos sean todos nombrados o sin nombre
-                if (len(args) == 0) == (len(keys) == 0):
-                    raise TypeError("Los parametros no estan correctamente ingresados.")
-                elif len(keys) != 0:
-                    params = dict(keys)
-                elif len(args) != 0:
-                    params = list(args)
+            elif len(args) > 0 and len(keys) > 0:
+                raise TypeError("Los parametros no estan correctamente ingresados.")
 
-                # validacion de notificacion
-                noti = False
+            elif len(keys) != 0:
+
+                # Validación de notificación.
                 if "Notify" in keys:
                     if type(keys["Notify"]) is not bool:
                         raise TypeError("Notify debe ser booleano.")
                     else:
                         noti = keys["Notify"]
+                        keys.pop("Notify", None)
 
-                # creacion del jsonrpc
-                data = {}
-                data["jsonrpc"] = self.jsonrpc_version
-                data["method"] = method
-                if len(params) > 0:
-                    data["params"] = params
-                if not noti:
-                    data["id"] = generador_de_ids()
+                params = dict(keys)
 
-                # creacion del socket cliente
-                sock = socket(AF_INET, SOCK_STREAM)
-                sock.connect((self.address, self.port))
+            elif len(args) != 0:
+                params = list(args)
 
-                # procesamiento y envio de datos.
+            elif len(args) == 0 and len(keys) == 0:
+                params = []
+
+            # Creación del jsonrpc.
+            data = {}
+            data["jsonrpc"] = self.jsonrpc_version
+            data["method"] = method
+            if len(params) > 0:
+                data["params"] = params
+            if not noti:
+                data["id"] = generador_de_ids()
+
+            # Creación del socket cliente.
+            sock = socket(AF_INET, SOCK_STREAM)
+            sock.connect((self.address, self.port))
+
+            # procesamiento y envio de datos.
+            try:
+                sock.settimeout(self.C1)
                 data = json.dumps(data)
+                data_e = data.encode()
+                size = 0
+                msglen = len(data_e)
+                while size < msglen:
+                    size += sock.send(data_e[size:])
+            except Exception:
+                pass
 
-                print("CLIENT | REQUEST: " + data)
+            print("CLIENT | REQUEST: " + data)
 
-                data = data.encode()
-                sock.sendall(data)
+            # recepcion de datos.
+            data = ""
+            sock.settimeout(self.C2)
+            try:
+                while True:
+                    res = sock.recv(self.buffer_receptor)
+                    if not res: break 
+                    data += res.decode()
+            except Exception:
+                pass
 
-                # retorno de datos.
-                raise_exep = False
-                if not noti:
-                    data = sock.recv(self.buffer_receptor)
-                    data = data.decode()
+            # muestra información en caso de que no sea una notificación.
+            if data != "":
+                print("CLIENT | RESPONSE: " + data)
+                data = json.loads(data)
+            else:
+                data = None
 
-                    print("CLIENT | RESPONSE: " + data)
+            # cierre de socket cliente.
+            sock.close()
 
-                    data = json.loads(data)
-
-                    if "error" in data:
-                        raise_exep = True
-
-                # cierre de socket cliente.
-                sock.close()
-
-                if raise_exep:
-                    raise ClientException(data["error"]["message"], data["error"]["code"])
-                elif not noti:
-                    return data["result"]
-                else:
-                    return None
+            if data is None and noti:
+                return None
+            elif data is not None and "error" in data:
+                raise ClientException(data["error"]["message"], data["error"]["code"])
+            elif data is not None and "result" in data:
+                return data["result"]
+            else:
+                raise ClientException("Ha ocurrido un error inesperado.", 0)
         return ret
 
 

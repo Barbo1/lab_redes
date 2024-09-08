@@ -2,11 +2,11 @@
 
 asumimos que tenemos las siguientes funciones:
 
-get_json_rpc_right(version, resultado, id);
+get_json_rpc_right(resultado, id);
 
 retorna un json rpc que representa una salida valida, con un resultado.
 
-get_json_rpc_error(version, code, id);
+get_json_rpc_error(code, id);
 
 retorna un json rpc que representa una salida invalida, con un codigo y mensaje 
 de error correspondientes.
@@ -15,6 +15,7 @@ validate_json_rpc(json);
 
 retorna true si el json es un json_rpc valido.
 
+los json se crearan con una version siempre igual a "2.0"
 
 
 class Server {
