@@ -15,12 +15,12 @@ class ClientException(Exception):
 
 
 class Client(object):
-    jsonrpc_version = "2.0"
-    buffer_receptor = 64
-    address = None
-    port = None
-    C1 = 0.0009
-    C2 = 0.1236
+    jsonrpc_version = "2.0"             # Socket mediante el cual acepta conexiones.
+    buffer_receptor = 64                # Largo del buffer que acepta un mensaje.
+    address = None                      # IP mediante la cual se realiza la conexión.
+    port = None                         # Puerto mediante el cual se realiza la conexión.
+    SIMPLE_OP = 0.01                           # Tiempo en milisegundos que espera antes de retornar timeout(cuando espera para enviar). 
+    COMPLEX_OP = 0.067                          # Tiempo en milisegundos que espera antes de retornar timeout(cuando espera el resultado). 
 
     def __init__(self, address: str, port: int):
         self.address = address
@@ -61,6 +61,10 @@ class Client(object):
             elif len(args) == 0 and len(keys) == 0:
                 params = []
 
+            # Creación del socket cliente.
+            sock = socket(AF_INET, SOCK_STREAM)
+            sock.connect((self.address, self.port))
+
             # Creación del jsonrpc.
             data = {}
             data["jsonrpc"] = self.jsonrpc_version
@@ -70,31 +74,31 @@ class Client(object):
             if not noti:
                 data["id"] = generador_de_ids()
 
-            # Creación del socket cliente.
-            sock = socket(AF_INET, SOCK_STREAM)
-            sock.connect((self.address, self.port))
-
             # procesamiento y envio de datos.
             try:
-                sock.settimeout(self.C1)
+                sock.settimeout(self.SIMPLE_OP)
                 data = json.dumps(data)
                 data_e = data.encode()
                 size = 0
                 msglen = len(data_e)
                 while size < msglen:
                     size += sock.send(data_e[size:])
-            except Exception:
+            except TimeoutError:
                 pass
+            except Exception:
+                print("ha ocurrido un error.")
+                sock.close()
+                return
 
             print("CLIENT | REQUEST: " + data)
 
             # recepcion de datos.
             data = ""
-            sock.settimeout(self.C2)
             try:
+                sock.settimeout(self.COMPLEX_OP)
                 while True:
                     res = sock.recv(self.buffer_receptor)
-                    if not res: break 
+                    if not res: break
                     data += res.decode()
             except Exception:
                 pass
@@ -109,6 +113,7 @@ class Client(object):
             # cierre de socket cliente.
             sock.close()
 
+            # retorno de información.
             if data is None and noti:
                 return None
             elif data is not None and "error" in data:
@@ -116,7 +121,7 @@ class Client(object):
             elif data is not None and "result" in data:
                 return data["result"]
             else:
-                raise ClientException("Ha ocurrido un error inesperado.", 0)
+                raise ClientException("Ha ocurrido un error inesperado.", -1)
         return ret
 
 

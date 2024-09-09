@@ -62,7 +62,7 @@ class Server(object):
     sock = None                 # socket mediante el cual acepta conexiones.
     queue_length = 5            # nombre de mensajes que pueden haber en la cola de entrada.
     buffer_receptor = 64        # largo del buffer que acepta un mensaje.
-    S = 0.0009                  # Tiempo en milisegundos que espera antes de retornar timeout.
+    SIMPLE_OP = 0.017           # Tiempo en milisegundos que espera antes de retornar timeout.
 
     def __init__(self, info: tuple[str, int]):
         self.sock = socket(AF_INET, SOCK_STREAM)
@@ -71,23 +71,20 @@ class Server(object):
 
     def handler(self, conn):
 
-        # crear una funcion de validacion de que recorra el string para validar el json.
-        # la funcion debe recorrer el string y sumar a un contador +1 para si encuentra 
-        # un "{" que no este dentro de un string, y -1 para si encuentra "}". Si el 
-        # contador llega a 0 y no existe ningun caracter luego del ultimo "}", se prueba
-        # convertir con la funcionalidad json.loads.
-
         # recepcion de datos
         data = ""
         try:
-            conn.settimeout(self.S)
+            # recepción y procesamiento de datos.
             while True:
                 res = conn.recv(self.buffer_receptor).decode()
-                if not res:
-                    break
+                if not res: break
                 data += res
-        except Exception:
+        except TimeoutError:
             pass
+        except Exception:
+            print("ha ocurrido un error.")
+            conn.close()
+            return
 
         # validar que los datos recivios representen un json.
         try:
@@ -128,10 +125,9 @@ class Server(object):
             else:
                 data = get_json_rpc_error(-32600)
 
-        # envio de data
+        # envìo de data.
         if data is not None:
-            conn.settimeout(self.S)
-            # procesamiento y envio de datos.
+            # procesamiento y envìo de datos.
             try:
                 data = json.dumps(data)
                 data = data.encode()
@@ -139,14 +135,20 @@ class Server(object):
                 msglen = len(data)
                 while size < msglen:
                     size += conn.send(data[size:])
-            except Exception:
+            except TimeoutError:
                 pass
+            except Exception:
+                print("ha ocurrido un error.")
+                conn.close()
+                return
+
         conn.close()
 
     def serve(self):
         while True:
             try:
                 conn, _ = self.sock.accept()
+                conn.settimeout(self.SIMPLE_OP)
                 th = Thread(target=self.handler, args=(conn, ))
                 th.start()
             except KeyboardInterrupt:
