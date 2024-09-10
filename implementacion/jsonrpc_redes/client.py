@@ -19,8 +19,8 @@ class Client(object):
     buffer_receptor = 64                # Largo del buffer que acepta un mensaje.
     address = None                      # IP mediante la cual se realiza la conexión.
     port = None                         # Puerto mediante el cual se realiza la conexión.
-    SIMPLE_OP = 0.01                           # Tiempo en milisegundos que espera antes de retornar timeout(cuando espera para enviar). 
-    COMPLEX_OP = 0.067                          # Tiempo en milisegundos que espera antes de retornar timeout(cuando espera el resultado). 
+    SIMPLE_OP = 0.01                    # Tiempo en milisegundos que espera antes de retornar timeout(cuando espera para enviar). 
+    COMPLEX_OP = 0.067                  # Tiempo en milisegundos que espera antes de retornar timeout(cuando espera el resultado). 
 
     def __init__(self, address: str, port: int):
         self.address = address

@@ -52,8 +52,8 @@ def triangulo(hegith: int, extra: int):
     return ret
 
 
-port = 10105
-host = "0.0.0.0"
+port = 8081
+host = "127.0.0.1"
 
 server = Server((host, port))
 server.add_method(matrix_mult)

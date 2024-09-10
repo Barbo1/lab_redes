@@ -44,14 +44,14 @@ def validate_json_rpc(json: dict) -> bool:
             if len(args) == 2:
                 return (
                     "id" in args and
-                    "params" in args
-                    and type(json["params"]) is list or dict
+                    "params" in args and
+                    (type(json["params"]) is list or type(json["params"]) is dict)
                 )
             if len(args) == 1:
                 return (
                     "id" in args or
-                    "params" in args and
-                    type(json["params"]) is list or dict
+                    ("params" in args and
+                    (type(json["params"]) is list or type(json["params"]) is dict))
                 )
             if len(args) == 0:
                 return True

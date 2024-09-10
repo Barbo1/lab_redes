@@ -24,8 +24,8 @@ def muliplicar_second(lista: list, operando):
     return lista[1] * operando
 
 
-port = 10106
-host = "0.0.0.0"
+port = 8080
+host = "127.0.0.1"
 
 server = Server((host, port))
 server.add_method(multiplicacion)
