@@ -8,7 +8,7 @@ def generador_de_ids():
 
 
 class ClientException(Exception):
-    def __init__(self, message: str, code: int):
+    def __init__(self, message, code):
         self.message = message
         self.code = code
         super().__init__("")
@@ -22,11 +22,11 @@ class Client(object):
     SIMPLE_OP = 0.01                    # Tiempo en milisegundos que espera antes de retornar timeout(cuando espera para enviar). 
     COMPLEX_OP = 0.067                  # Tiempo en milisegundos que espera antes de retornar timeout(cuando espera el resultado). 
 
-    def __init__(self, address: str, port: int):
+    def __init__(self, address, port):
         self.address = address
         self.port = port
 
-    def __getattr__(self, method: str) -> callable:
+    def __getattr__(self, method):
         if method == "":
             raise AttributeError("No hay nombre para el metodo.")
 
@@ -125,5 +125,5 @@ class Client(object):
         return ret
 
 
-def connect(address: str, port: int) -> Client:
+def connect(address, port):
     return Client(address, port)

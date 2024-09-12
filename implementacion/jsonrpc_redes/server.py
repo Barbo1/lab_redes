@@ -6,13 +6,13 @@ VERSION_JSON_RPC = "2.0"
 
 
 # funcion que retorna un json rpc el resultado de una operacion.
-def get_json_rpc_right(result, id: int) -> dict:
+def get_json_rpc_right(result, id):
     return {"jsonrpc": VERSION_JSON_RPC, "result": result, "id": id}
 
 
 # funcion que retorna un json rpc erroneo con el codigo y mensaje
 # de error correspondiente.
-def get_json_rpc_error(code: int = None, id: int = None) -> dict:
+def get_json_rpc_error(code = None, id = None):
     if code == -32700:
         message = "Parse error"
     elif code == -32600:
@@ -32,7 +32,7 @@ def get_json_rpc_error(code: int = None, id: int = None) -> dict:
 
 
 # valida que el objeto json es json rpc correctamente estructurado.
-def validate_json_rpc(json: dict) -> bool:
+def validate_json_rpc(json):
     if type(json) is dict:
         if (
             "jsonrpc" in json and json["jsonrpc"] == VERSION_JSON_RPC and
@@ -64,7 +64,7 @@ class Server(object):
     buffer_receptor = 64        # largo del buffer que acepta un mensaje.
     SIMPLE_OP = 0.017           # Tiempo en milisegundos que espera antes de retornar timeout.
 
-    def __init__(self, info: tuple[str, int]):
+    def __init__(self, info):
         self.sock = socket(AF_INET, SOCK_STREAM)
         self.sock.bind(info)
         self.sock.listen(self.queue_length)
@@ -154,7 +154,7 @@ class Server(object):
             except KeyboardInterrupt:
                 return
 
-    def add_method(self, function: callable, nombre: str = None):
+    def add_method(self, function, nombre = None):
         if nombre is None:
             setattr(self, function.__name__, function)
         else:
