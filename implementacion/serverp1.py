@@ -10,7 +10,7 @@ def multiplicacion(operando_1, operando_2):
 
 # Realiza la suma de dos enteros. En caso de que los parametros no correspondan
 # a enteros, ser retornara un error.
-def suma(operando_1: int, operando_2: int):
+def suma(operando_1, operando_2):
     if type(operando_1) is not int:
         raise TypeError
     if type(operando_2) is not int:
@@ -20,7 +20,7 @@ def suma(operando_1: int, operando_2: int):
 
 # Toma un arreglo de elementos y otro elemento aparte, y retorna la
 # multiplicacion del segundo elemento de la lista por el elemento
-def muliplicar_second(lista: list, operando):
+def muliplicar_second(lista, operando):
     return lista[1] * operando
 
 

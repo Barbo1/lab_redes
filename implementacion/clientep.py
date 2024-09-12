@@ -44,8 +44,9 @@ del conn
 conn = connect("127.0.0.1", 8081)
 
 # Prueba de función de regresión lineal. 
-m = conn.approximation([1, 3.1, 8.3], [10, 2, 4], 2)
-assert abs(m - 6.6) < 0.2
+m = conn.roots_square(1, -3, 2)
+assert m[0] == 1 or m[0] == 2
+assert m[1] == 1 or m[1] == 2
 
 # Pruebas de función para multiplicación de matrices cuadradas
 m = conn.matrix_mult([[1, 3], [2, 4]], [[5, 7], [6, 8]])

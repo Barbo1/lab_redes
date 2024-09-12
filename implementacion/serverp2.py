@@ -1,18 +1,16 @@
 from jsonrpc_redes import Server
-from statistics import linear_regression
+from math import sqrt
 
 
 # evalua el punto en la funcion lineal de la regrecion lineal, obtenida
 # mediante los puntos representados por las listas.
-def approximation(lista_de_x: list, lista_de_y: list, punto: float):
-    if len(lista_de_x) != len(lista_de_y):
-        raise TypeError("")
-    pendiente, interseccion = linear_regression(lista_de_x, lista_de_y)
-    return pendiente*punto + interseccion
+def roots_square(a, b, c):
+    r = sqrt(b**2 - 4*a*c)
+    return [(-b + r)/(2*a), (-b - r)/(2*a)]
 
 
 # multiplicacion de matrices cuadradas
-def matrix_mult(A: list[list], B: list[list]):
+def matrix_mult(A, B):
     if len(A) != len(B):
         raise TypeError("")
 
@@ -41,7 +39,7 @@ def matrix_mult(A: list[list], B: list[list]):
 #     *
 #    ***
 #   *****
-def triangulo(hegith: int, extra: int):
+def triangulo(hegith, extra):
     ret = ""
     nivel = 1
     hegith_1 = hegith-1
@@ -57,6 +55,6 @@ host = "127.0.0.1"
 
 server = Server((host, port))
 server.add_method(matrix_mult)
-server.add_method(approximation)
+server.add_method(roots_square)
 server.add_method(triangulo)
 server.serve()
