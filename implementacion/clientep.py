@@ -2,7 +2,7 @@ from jsonrpc_redes import connect
 from socket import socket, AF_INET, SOCK_STREAM
 from json import loads
 
-conn = connect("127.0.0.1", 8080)
+conn = connect("200.0.0.10", 8080)
 
 # prueba de la funcion de multiplicación.
 m = conn.multiplicacion(4, 5)
@@ -41,7 +41,7 @@ else:
 
 del conn
 
-conn = connect("127.0.0.1", 8081)
+conn = connect("200.100.0.15", 8080)
 
 # Prueba de función de regresión lineal. 
 m = conn.roots_square(1, -3, 2)
@@ -62,7 +62,7 @@ print(m)
 def prueba_envio_erroneo(data, message, code):
     print("CLIENT | REQUEST: " + data)
     sock = socket(AF_INET, SOCK_STREAM)
-    sock.connect(("127.0.0.1", 8080))
+    sock.connect(("200.0.0.10", 8080))
     sock.send(data.encode())
     data = ""
     try:
