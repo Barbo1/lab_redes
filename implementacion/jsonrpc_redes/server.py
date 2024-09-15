@@ -1,4 +1,4 @@
-from socket import socket, SHUT_RDWR, AF_INET, SOCK_STREAM
+from socket import socket, SHUT_RDWR, AF_INET, SOCK_STREAM, timeout
 import json
 from threading import Thread
 
@@ -59,10 +59,10 @@ def validate_json_rpc(json):
 
 
 class Server(object):
-    sock = None                 # socket mediante el cual acepta conexiones.
-    queue_length = 5            # nombre de mensajes que pueden haber en la cola de entrada.
-    buffer_receptor = 64        # largo del buffer que acepta un mensaje.
-    SIMPLE_OP = 0.017           # Tiempo en milisegundos que espera antes de retornar timeout.
+    sock = None             # socket mediante el cual acepta conexiones.
+    queue_length = 5        # nombre de mensajes que pueden haber en la cola de entrada.
+    buffer_receptor = 128   # largo del buffer que acepta un mensaje.
+    SIMPLE_OP = 0.575       # Tiempo en milisegundos que espera antes de retornar timeout.
 
     def __init__(self, info):
         self.sock = socket(AF_INET, SOCK_STREAM)
@@ -79,7 +79,7 @@ class Server(object):
                 res = conn.recv(self.buffer_receptor).decode()
                 if not res: break
                 data += res
-        except TimeoutError:
+        except timeout:
             pass
         except Exception:
             print("ha ocurrido un error.")
@@ -135,7 +135,7 @@ class Server(object):
                 msglen = len(data)
                 while size < msglen:
                     size += conn.send(data[size:])
-            except TimeoutError:
+            except timeout:
                 pass
             except Exception:
                 print("ha ocurrido un error.")

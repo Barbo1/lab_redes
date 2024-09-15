@@ -1,4 +1,4 @@
-from socket import socket, AF_INET, SOCK_STREAM
+from socket import socket, AF_INET, SOCK_STREAM, timeout
 import json
 import random
 
@@ -15,12 +15,12 @@ class ClientException(Exception):
 
 
 class Client(object):
-    jsonrpc_version = "2.0"             # Socket mediante el cual acepta conexiones.
-    buffer_receptor = 64                # Largo del buffer que acepta un mensaje.
-    address = None                      # IP mediante la cual se realiza la conexión.
-    port = None                         # Puerto mediante el cual se realiza la conexión.
-    SIMPLE_OP = 0.01                    # Tiempo en milisegundos que espera antes de retornar timeout(cuando espera para enviar). 
-    COMPLEX_OP = 0.067                  # Tiempo en milisegundos que espera antes de retornar timeout(cuando espera el resultado). 
+    jsonrpc_version = "2.0"     # Socket mediante el cual acepta conexiones.
+    buffer_receptor = 128       # Largo del buffer que acepta un mensaje.
+    address = None              # IP mediante la cual se realiza la conexión.
+    port = None                 # Puerto mediante el cual se realiza la conexión.
+    SIMPLE_OP = 0.575           # Tiempo en milisegundos que espera antes de retornar timeout(cuando espera para enviar). 
+    COMPLEX_OP = 1.437          # Tiempo en milisegundos que espera antes de retornar timeout(cuando espera el resultado). 
 
     def __init__(self, address, port):
         self.address = address
@@ -46,12 +46,12 @@ class Client(object):
             elif len(keys) != 0:
 
                 # Validación de notificación.
-                if "Notify" in keys:
-                    if type(keys["Notify"]) is not bool:
+                if "notify" in keys:
+                    if type(keys["notify"]) is not bool:
                         raise TypeError("Notify debe ser booleano.")
                     else:
-                        noti = keys["Notify"]
-                        keys.pop("Notify", None)
+                        noti = keys["notify"]
+                        keys.pop("notify", None)
 
                 params = dict(keys)
 
@@ -83,7 +83,7 @@ class Client(object):
                 msglen = len(data_e)
                 while size < msglen:
                     size += sock.send(data_e[size:])
-            except TimeoutError:
+            except timeout:
                 pass
             except Exception:
                 print("ha ocurrido un error.")
@@ -100,8 +100,12 @@ class Client(object):
                     res = sock.recv(self.buffer_receptor)
                     if not res: break
                     data += res.decode()
-            except Exception:
+            except timeout:
                 pass
+            except Exception:
+                print("ha ocurrido un error.")
+                sock.close()
+                return
 
             # muestra información en caso de que no sea una notificación.
             if data != "":
