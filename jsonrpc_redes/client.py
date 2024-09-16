@@ -103,13 +103,14 @@ class Client(object):
             except timeout:
                 pass
             except Exception:
-                print("ha ocurrido un error.")
+                print("Ha ocurrido un error.")
                 sock.close()
                 return
+            
+            print("CLIENT | RESPONSE: " + data)
 
             # muestra información en caso de que no sea una notificación.
             if data != "":
-                print("CLIENT | RESPONSE: " + data)
                 data = json.loads(data)
             else:
                 data = None
