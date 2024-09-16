@@ -103,7 +103,7 @@ class Server(object):
                     method = json_rpc["method"]
                     method = getattr(self, method)
                 except AttributeError:
-                    data = get_json_rpc_error(-32601, id)
+                    data = get_json_rpc_error(-32601, id) if id is not None else None
                 else:
 
                     # validar que se puede obtener el resultado.
@@ -111,17 +111,13 @@ class Server(object):
                         args = json_rpc["params"] if "params" in json_rpc else []
                         result = method(*args) if type(args) is list else method(**args)
                     except TypeError:
-                        data = get_json_rpc_error(-32602, id)
+                        data = get_json_rpc_error(-32602, id) if id is not None else None
                     except Exception:
-                        data = get_json_rpc_error(-32603, id)
+                        data = get_json_rpc_error(-32603, id) if id is not None else None
                     else:
 
                         # retorna mensaje en caso de que no sea un notifiación.
-                        if id is not None:
-                            data = get_json_rpc_right(result, json_rpc["id"])
-                        else:
-                            data = None
-
+                        data = data = get_json_rpc_right(result, json_rpc["id"]) if id is not None else None
             else:
                 data = get_json_rpc_error(-32600)
 
