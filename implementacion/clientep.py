@@ -76,7 +76,7 @@ conn = connect("200.0.0.10", 8080)
 
 # falla por parametros incorrectos.
 try:
-    m = conn.sum(6, "3", notify=True)
+    m = conn.sum(6, "3")
 except Exception as e:
     print(e.message)
 else:
