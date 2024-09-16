@@ -14,15 +14,15 @@ def get_json_rpc_right(result, id):
 # de error correspondiente.
 def get_json_rpc_error(code = None, id = None):
     if code == -32700:
-        message = "Parse error"
+        message = "Parse error."
     elif code == -32600:
-        message = "Invalid Request"
+        message = "Invalid Request."
     elif code == -32601:
-        message = "Method not found"
+        message = "Method not found."
     elif code == -32602:
-        message = "Invalid params"
+        message = "Invalid params."
     elif code == -32603:
-        message = "Internal error"
+        message = "Internal error."
 
     return {
         "jsonrpc": VERSION_JSON_RPC,
