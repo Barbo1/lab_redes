@@ -67,10 +67,10 @@ def prueba_envio_erroneo(data, message, code):
     assert packet["error"]["code"] == code
 
 # falla por envio de un json invalido.
-prueba_envio_erroneo("hola", "Parse error", -32700)
+prueba_envio_erroneo("hola", "Parse error.", -32700)
 
 # falla por envio de un json rpc invalido.
-prueba_envio_erroneo("{\"jsonrpc\": \"2.0\", \"method\": \"hola\", \"params\": [1,2], \"madre\": \"padre\"}", "Invalid Request", -32600)
+prueba_envio_erroneo("{\"jsonrpc\": \"2.0\", \"method\": \"hola\", \"params\": [1,2], \"madre\": \"padre\"}", "Invalid Request.", -32600)
 
 conn = connect("200.0.0.10", 8080)
 
