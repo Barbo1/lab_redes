@@ -77,24 +77,24 @@ conn = connect("200.0.0.10", 8080)
 # falla por parametros incorrectos.
 try:
     m = conn.sum(6, "3", notify=True)
-except Exception:
-    pass
+except Exception as e:
+    print(e.message, e.code)
 else:
     raise Exception()
 
 # falla por función inexistente.
 try:
     m = conn.suma(6, 3)
-except Exception:
-    pass
+except Exception as e:
+    print(e.message, e.code)
 else:
     raise Exception()
 
 # falla por error interno en la función.
 try:
     m = conn.ms([0], 1.2)
-except Exception:
-    pass
+except Exception as e:
+    print(e.message, e.code)
 else:
     raise Exception()
 
