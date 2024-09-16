@@ -64,6 +64,7 @@ def prueba_envio_erroneo(data, message, code):
     packet = loads(data)
     assert "error" in packet
     assert packet["error"]["message"] == message
+    assert packet["error"]["code"] == code
 
 # falla por envio de un json invalido.
 prueba_envio_erroneo("hola", "Parse error", -32700)
