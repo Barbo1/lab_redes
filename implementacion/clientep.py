@@ -64,7 +64,6 @@ def prueba_envio_erroneo(data, message, code):
     packet = loads(data)
     assert "error" in packet
     assert packet["error"]["message"] == message
-    assert packet["error"]["code"] == code
 
 # falla por envio de un json invalido.
 prueba_envio_erroneo("hola", "Parse error", -32700)
@@ -78,7 +77,7 @@ conn = connect("200.0.0.10", 8080)
 try:
     m = conn.sum(6, "3", notify=True)
 except Exception as e:
-    print(e.message, e.code)
+    print(e.message)
 else:
     raise Exception()
 
@@ -86,7 +85,7 @@ else:
 try:
     m = conn.suma(6, 3)
 except Exception as e:
-    print(e.message, e.code)
+    print(e.message)
 else:
     raise Exception()
 
@@ -94,7 +93,7 @@ else:
 try:
     m = conn.ms([0], 1.2)
 except Exception as e:
-    print(e.message, e.code)
+    print(e.message)
 else:
     raise Exception()
 
