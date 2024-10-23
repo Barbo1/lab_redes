@@ -55,30 +55,8 @@ void sr_send_icmp_error_packet(uint8_t type,
                               uint32_t ipDst,
                               uint8_t *ipPacket)
 {
-//struct sr_if* sr_get_interface_given_ip(struct sr_instance* sr, uint32_t ip) <-
 
-
-
-  int arpPacketLen = sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t);
-  uint8_t *arpPacket = malloc(arpPacketLen);
-
-  sr_ethernet_hdr_t *ethHdr = (struct sr_ethernet_hdr *) arpPacket;
-  memcpy(ethHdr->ether_dhost, <host destino>, ETHER_ADDR_LEN);
-  memcpy(ethHdr->ether_shost, <host origen>, ETHER_ADDR_LEN);
-  ethHdr->ether_type = htons(ethertype_arp);
-  sr_arp_hdr_t *arpHdr = (sr_arp_hdr_t *) (arpPacket + sizeof(sr_ethernet_hdr_t));
-
-  arpHdr->ar_hrd = htons(1);
-  arpHdr->ar_pro = htons(2048);
-  arpHdr->ar_hln = 6;
-  arpHdr->ar_pln = 4;
-  arpHdr->ar_op = htons(arp_op_request);
-
-  memcpy(arpHdr->ar_sha, <sender address>, ETHER_ADDR_LEN);
-  memcpy(arpHdr->ar_tha, <target address>, ETHER_ADDR_LEN);
-  
-  arpHdr->ar_sip = <sender IP>;
-  arpHdr->ar_tip = <target IP>;
+  /* COLOQUE AQUÍ SU CÓDIGO*/
 
 } /* -- sr_send_icmp_error_packet -- */
 
@@ -98,9 +76,6 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   * - Si no es para una de mis interfaces y no hay coincidencia en la tabla de enrutamiento, enviar ICMP net unreachable
   * - Sino, si es para mí, verificar si es un paquete ICMP echo request y responder con un echo reply 
   * - Sino, verificar TTL, ARP y reenviar si corresponde (puede necesitar una solicitud ARP y esperar la respuesta)
-  
-        --void sr_arp_request_send(struct sr_instance *sr, uint32_t ip) 
-
   * - No olvide imprimir los mensajes de depuración
   */
 
