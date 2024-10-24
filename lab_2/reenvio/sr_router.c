@@ -49,15 +49,22 @@ void sr_init(struct sr_instance* sr)
 } /* -- sr_init -- */
 
 /* Envía un paquete ICMP de error */
-void sr_send_icmp_error_packet(uint8_t type,
-                              uint8_t code,
-                              struct sr_instance *sr,
-                              uint32_t ipDst,
-                              uint8_t *ipPacket)
-{
-
-  /* COLOQUE AQUÍ SU CÓDIGO*/
-
+void sr_send_icmp_error_packet(uint8_t type, uint8_t code, struct sr_instance *sr, uint32_t ipDst, uint8_t *ipPacket) {
+  if (type == 0) {
+    sr_icmp_hdr_t packete;
+    packete.icmp_code = code;
+    packete.icmp_type = type;
+    packete.icmp_sum = ~(code | type << 8); // por definicion.
+    
+  } else if (type == 3 || type == 11) {
+    sr_icmp_t3_hdr_t packete;
+    packete.icmp_code = code;
+    packete.icmp_type = type;
+    packete.unused = 0;
+    packete.next_mtu = 0;
+    packete.icmp_sum = 1; // calculo del checksum.
+    packete.data = 1; // data a ingresar.
+  }
 } /* -- sr_send_icmp_error_packet -- */
 
 void sr_handle_ip_packet(struct sr_instance *sr,
