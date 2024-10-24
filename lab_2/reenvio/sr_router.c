@@ -51,49 +51,50 @@ void sr_init(struct sr_instance* sr)
 /* Envía un paquete ICMP de error */
 void sr_send_icmp_error_packet(uint8_t type, uint8_t code, struct sr_instance *sr, uint32_t ipDst, uint8_t *ipPacket) {
   if (type == 0) {
-    sr_icmp_hdr_t *  packete = (sr_icmp_hdr_t *)malloc(sizeof(sr_icmp_hdr_t));
-    packete->icmp_code = code;
-    packete->icmp_type = type;
+    sr_icmp_hdr_t paquete;
+    paquete.icmp_code = code;
+    paquete.icmp_type = type;
 
     /* simplificacion del calculo de checksum.
      * */
-    packete->icmp_sum = ~(code | type << 8);
-    packete->icmp_sum += packete->icmp_sum & 0x8000;
+    paquete.icmp_sum = ~(code | type << 8);
+    paquete.icmp_sum += paquete.icmp_sum & 0x8000;
+    paquete.icmp_sum = icmp_cksum (&paquete, sizeof (sr_icmp_hdr_t));
 
-    /* envio del paquete. 
+    /* envio del paquete.
      * */
+    sr_send_packet (
+      sr, 
+      (uint8_t *) &paquete, 
+      sizeof (sr_icmp_hdr_t), 
+      sr_get_interface_given_ip(sr, ipDst)->name
+    );
 
   } else if (type == 3 || type == 11) {
-    sr_icmp_t3_hdr_t *  packete = (sr_icmp_t3_hdr_t *)malloc(sizeof(sr_icmp_t3_hdr_t));
-    packete->icmp_code = code;
-    packete->icmp_type = type;
-    packete->unused = 0;
-    packete->icmp_sum = 0;
-
-    /* probablemente se tenga que ingresar luego de pedir la direccion 
-     * de mac por arp.
-     * */ 
-    packete->next_mtu = 0; 
+    sr_icmp_t3_hdr_t paquete;
+    paquete.icmp_code = code;
+    paquete.icmp_type = type;
+    paquete.unused = 0;
+    paquete.icmp_sum = 0;
+    paquete.next_mtu = 0; // este campo como hay que llenarlo?
 
     /* ingreso de datos en el campo de datos.
      * */
-    uint8_t * paquete_cast_8 = (uint8_t *)packete->data;
+    uint8_t * paquete_cast_8 = (uint8_t *)paquete.data;
     for (int i = 0; i < sizeof (sr_ip_hdr_t) + 8; i++) {
       paquete_cast_8[i] = ipPacket[i];
     }
 
-       
-    /* calculo del checksum.
-     * */ 
-    uint16_t * paquete_cast_16 = (uint16_t *)packete->data;
-    uint16_t res = 0;
-    for (int i = 0; i < sizeof (sr_icmp_t3_hdr_t) / 2; i++) {
-      res += res + paquete_cast_16[i] + (res & 0x8000 || paquete_cast_16[i] & 0x8000);
-    }
-    packete->icmp_sum = res;
-    
-    /* envio del paquete. 
+    paquete.icmp_sum = icmp3_cksum(&paquete, sizeof (sr_icmp_t3_hdr_t) / 2);
+
+    /* envio del paquete.
      * */
+    sr_send_packet (
+      sr, 
+      (uint8_t *) &paquete, 
+      sizeof (sr_icmp_t3_hdr_t), 
+      sr_get_interface_given_ip(sr, ipDst)->name
+    );
   }
 } /* -- sr_send_icmp_error_packet -- */
 
