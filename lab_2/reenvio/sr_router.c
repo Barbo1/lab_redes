@@ -49,7 +49,7 @@ void sr_init(struct sr_instance* sr)
 } /* -- sr_init -- */
 
 /* Envía un paquete ICMP de error */
-void sr_send_icmp_error_packet(uint8_t type, uint8_t code, struct sr_instance *sr, uint32_t ipDst, uint8_t *ipPacket) {
+void sr_send_icmp_error_packet (uint8_t type, uint8_t code, struct sr_instance *sr, uint32_t ipDst, uint8_t *ipPacket) {
   if (type == 0) {
     sr_icmp_hdr_t paquete;
     paquete.icmp_code = code;
@@ -57,8 +57,6 @@ void sr_send_icmp_error_packet(uint8_t type, uint8_t code, struct sr_instance *s
 
     /* simplificacion del calculo de checksum.
      * */
-    paquete.icmp_sum = ~(code | type << 8);
-    paquete.icmp_sum += paquete.icmp_sum & 0x8000;
     paquete.icmp_sum = icmp_cksum (&paquete, sizeof (sr_icmp_hdr_t));
 
     /* envio del paquete.
@@ -85,7 +83,7 @@ void sr_send_icmp_error_packet(uint8_t type, uint8_t code, struct sr_instance *s
       paquete_cast_8[i] = ipPacket[i];
     }
 
-    paquete.icmp_sum = icmp3_cksum(&paquete, sizeof (sr_icmp_t3_hdr_t) / 2);
+    paquete.icmp_sum = icmp3_cksum (&paquete, sizeof (sr_icmp_t3_hdr_t) / 2);
 
     /* envio del paquete.
      * */
@@ -113,20 +111,25 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   * - Verificar si el paquete es para una de mis interfaces o si hay una coincidencia en mi tabla de enrutamiento 
   * - Si no es para una de mis interfaces y no hay coincidencia en la tabla de enrutamiento, enviar ICMP net unreachable
   * - Sino, si es para mí, verificar si es un paquete ICMP echo request y responder con un echo reply 
-  * - Sino, verificar TTL, ARP y reenviar si corresponde (puede necesitar una solicitud ARP y esperar la respuesta)
+  * -(SI ES PARA UNA DE ) Sino, verificar TTL, ARP y reenviar si corresponde (puede necesitar una solicitud ARP y esperar la respuesta)
   * - No olvide imprimir los mensajes de depuración
   */
 
   /* se asume que el unico header encima del ip es el ethernet. */
   if (len <= sizeof (sr_ethernet_hdr_t)) {
-    /* discard packet */
+    return; /* discard packet PREGUNTAR*/
   }
+  
   sr_ip_hdr_t * ip_headers = (sr_ip_hdr_t *) (packet + sizeof (sr_ethernet_hdr_t));
 
   if (ip_headers->ip_sum == ip_cksum(ip_headers, sizeof (sr_ip_hdr_t))) {
-    /* discard packet */
+    return; /* discard packet */
   }
 
+  if ((ip_headers->ip_dst) == (sr->sr_addr.sin_addr.s_addr)) {
+
+    return; /* que carajos hay que hacer aca. */
+  }
 
   /*
   Estructura void sr_handle_ip_packet:
@@ -138,12 +141,12 @@ void sr_handle_ip_packet(struct sr_instance *sr,
       return ?
     } 
 
-    #? destination address from parameters or from ip header
+    #? destination address from parameters or from ip header PREGUNTAR
 
-    if(im destination address){
+    if(this router is destination address){
       ...
       return ?
-    } 
+    }
 
     interface = sr_get_interface_given_ip(sr_instance,ip)
 
@@ -153,13 +156,16 @@ void sr_handle_ip_packet(struct sr_instance *sr,
     }
 
     get ttl from ip header and substract 1
-    update checksum 
 
     if (ttl=0){
       sr_send_icmp_error_packet(time exceeded)
       return ?
+    } else {
+      update checksum
     }
-    get MAC address from ethernet header/ or use ARP???? * see function sr_handlepacket
+    
+    get MAC address use ARP * see function sr_handlepacket???
+
     make new ip datagram, ethernet frame
     sr_send_packet(sr_instance sr, uint8_t buf, len,interface
   {
