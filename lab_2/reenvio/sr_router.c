@@ -117,6 +117,55 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   * - No olvide imprimir los mensajes de depuración
   */
 
+  /* se asume que el unico header encima del ip es el ethernet. */
+  if (len <= sizeof (sr_ethernet_hdr_t)) {
+    /* discard packet */
+  }
+  sr_ip_hdr_t * ip_headers = (sr_ip_hdr_t *) (packet + sizeof (sr_ethernet_hdr_t));
+
+  if (ip_headers->ip_sum == ip_cksum(ip_headers, sizeof (sr_ip_hdr_t))) {
+    /* discard packet */
+  }
+
+
+  /*
+  Estructura void sr_handle_ip_packet:
+    get ip header from packet 
+    verify checksum in ip header
+
+    if(checksum is incorrect){
+      discard packet
+      return ?
+    } 
+
+    #? destination address from parameters or from ip header
+
+    if(im destination address){
+      ...
+      return ?
+    } 
+
+    interface = sr_get_interface_given_ip(sr_instance,ip)
+
+    if(destination address isnt in my routing table (interface=0) )){
+      sr_send_icmp_error_packet(host unreachable)
+      return ?
+    }
+
+    get ttl from ip header and substract 1
+    update checksum 
+
+    if (ttl=0){
+      sr_send_icmp_error_packet(time exceeded)
+      return ?
+    }
+    get MAC address from ethernet header/ or use ARP???? * see function sr_handlepacket
+    make new ip datagram, ethernet frame
+    sr_send_packet(sr_instance sr, uint8_t buf, len,interface
+  {
+    return
+
+*/
 }
 
 /* 
@@ -124,11 +173,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
 */
 
 /* Envía todos los paquetes IP pendientes de una solicitud ARP */
-void sr_arp_reply_send_pending_packets(struct sr_instance *sr,
-                                        struct sr_arpreq *arpReq,
-                                        uint8_t *dhost,
-                                        uint8_t *shost,
-                                        struct sr_if *iface) {
+void sr_arp_reply_send_pending_packets(struct sr_instance *sr, struct sr_arpreq *arpReq, uint8_t *dhost, uint8_t *shost, struct sr_if *iface) {
 
   struct sr_packet *currPacket = arpReq->packets;
   sr_ethernet_hdr_t *ethHdr;
