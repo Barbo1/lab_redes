@@ -50,51 +50,86 @@ void sr_init(struct sr_instance* sr)
 
 /* Envía un paquete ICMP de error */
 void sr_send_icmp_error_packet (uint8_t type, uint8_t code, struct sr_instance *sr, uint32_t ipDst, uint8_t *ipPacket) {
-  if (type == 0) {
-    sr_icmp_hdr_t paquete;
-    paquete.icmp_code = code;
-    paquete.icmp_type = type;
+  /* Creacion del paquete. */
+  int packet_size = sizeof(sr_icmp_t3_hdr_t) + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t);
+  uint8_t * packet = (uint8_t *)malloc(packet_size);
+  
+  /* Headers de ethernet. */
+  sr_ethernet_hdr_t * packet_ether = (sr_ethernet_hdr_t *)(packet);
+  // hay que utilizar todo lo relacionado a ARP.
+  memcpy (packet_ether->ether_dhost, <some>, ETHER_ADDR_LEN);
+  memcpy (packet_ether->ether_shost, <some>, ETHER_ADDR_LEN);
+  packet_ether->ether_type = htons(ethertype_ip);
 
-    /* simplificacion del calculo de checksum.
-     * */
-    paquete.icmp_sum = icmp_cksum (&paquete, sizeof (sr_icmp_hdr_t));
+  /* Headers de ip. */
+  sr_ip_hdr_t * packet_ip = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+  memcpy ((uint8_t *)packet_ip, ipPacket, sizeof(sr_ip_hdr_t));
+  packet_ip->ip_ttl = 32;
+  packet_ip->ip_src = sr->sr_addr.sin_addr.s_addr; 
+  packet_ip->ip_dst = ipDst;
+  packet_ip->ip_sum = ip_cksum ((sr_ip_hdr_t *)packet_ip, sizeof(sr_ip_hdr_t));
 
-    /* envio del paquete.
-     * */
-    sr_send_packet (
-      sr, 
-      (uint8_t *) &paquete, 
-      sizeof (sr_icmp_hdr_t), 
-      sr_get_interface_given_ip(sr, ipDst)->name
-    );
-
-  } else if (type == 3 || type == 11) {
-    sr_icmp_t3_hdr_t paquete;
-    paquete.icmp_code = code;
-    paquete.icmp_type = type;
-    paquete.unused = 0;
-    paquete.icmp_sum = 0;
-    paquete.next_mtu = 0; // este campo como hay que llenarlo?
-
-    /* ingreso de datos en el campo de datos.
-     * */
-    uint8_t * paquete_cast_8 = (uint8_t *)paquete.data;
-    for (int i = 0; i < sizeof (sr_ip_hdr_t) + 8; i++) {
-      paquete_cast_8[i] = ipPacket[i];
-    }
-
-    paquete.icmp_sum = icmp3_cksum (&paquete, sizeof (sr_icmp_t3_hdr_t) / 2);
-
-    /* envio del paquete.
-     * */
-    sr_send_packet (
-      sr, 
-      (uint8_t *) &paquete, 
-      sizeof (sr_icmp_t3_hdr_t), 
-      sr_get_interface_given_ip(sr, ipDst)->name
-    );
+  /* Headers de icmp. */
+  sr_icmp_t3_hdr_t * packet_icmp = (sr_icmp_t3_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  packet_icmp->icmp_code = code;
+  packet_icmp->icmp_type = type;
+  packet_icmp->icmp_sum = 0;
+  packet_icmp->next_mtu = 0;
+  packet_icmp->unused = 0;
+  
+  /* ingreso de datos en el campo de datos.
+   * */
+  for (int i = 0; i < sizeof (sr_ip_hdr_t) + 8; i++) {
+    packet_icmp->data[i] = ipPacket[i];
   }
+
+  packet_icmp->icmp_sum = icmp3_cksum (packet_icmp, sizeof (sr_icmp_t3_hdr_t));
+
+  /* envio del paquete.
+   * */
+  sr_send_packet (
+    sr, 
+    packet, 
+    packet_size, 
+    sr_get_interface_given_ip(sr, ipDst)->name
+  );
 } /* -- sr_send_icmp_error_packet -- */
+
+void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *sr, uint32_t ipDst, uint8_t *ipPacket) {
+  /* Creacion del paquete. */
+  int packet_size = sizeof(sr_icmp_hdr_t) + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t);
+  uint8_t * packet = (uint8_t *)malloc(packet_size);
+  
+  /* Headers de ethernet. */
+  sr_ethernet_hdr_t * packet_ether = (sr_ethernet_hdr_t *)(packet);
+  // hay que utilizar todo lo relacionado a ARP.
+  memcpy (packet_ether->ether_dhost, <some>, ETHER_ADDR_LEN);
+  memcpy (packet_ether->ether_shost, <some>, ETHER_ADDR_LEN);
+  packet_ether->ether_type = htons(ethertype_ip);
+
+  /* Headers de ip. */
+  sr_ip_hdr_t * packet_ip = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+  memcpy ((uint8_t *)packet_ip, ipPacket, sizeof(sr_ip_hdr_t));
+  packet_ip->ip_ttl = 32;
+  packet_ip->ip_src = sr->sr_addr.sin_addr.s_addr; 
+  packet_ip->ip_dst = ipDst;
+  packet_ip->ip_sum = ip_cksum ((sr_ip_hdr_t *)packet_ip, sizeof(sr_ip_hdr_t));
+
+  /* Headers de icmp. */
+  sr_icmp_hdr_t * packet_icmp = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  packet_icmp->icmp_code = code;
+  packet_icmp->icmp_type = type;
+  packet_icmp->icmp_sum = icmp_cksum (packet_icmp, sizeof (sr_icmp_hdr_t));
+
+  /* envio del paquete.
+   * */
+  sr_send_packet (
+    sr, 
+    packet, 
+    packet_size, 
+    sr_get_interface_given_ip(sr, ipDst)->name
+  );
+}
 
 void sr_handle_ip_packet(struct sr_instance *sr,
         uint8_t *packet /* lent */,
@@ -117,53 +152,61 @@ void sr_handle_ip_packet(struct sr_instance *sr,
 
   /* se asume que el unico header encima del ip es el ethernet. */
   if (len <= sizeof (sr_ethernet_hdr_t)) {
-    return; /* discard packet PREGUNTAR*/
+    return; /* discard packet PREGUNTAR */
   }
   
   sr_ip_hdr_t * ip_headers = (sr_ip_hdr_t *) (packet + sizeof (sr_ethernet_hdr_t));
 
-  if (ip_headers->ip_sum == ip_cksum(ip_headers, sizeof (sr_ip_hdr_t))) {
+  if (ip_headers->ip_sum == ip_cksum (ip_headers, sizeof (sr_ip_hdr_t))) {
     return; /* discard packet */
   }
 
-  if ((ip_headers->ip_dst) == (sr->sr_addr.sin_addr.s_addr)) {
-
-    return; /* que carajos hay que hacer aca. */
+  if (ip_headers->ip_dst == sr->sr_addr.sin_addr.s_addr) {
+    if (ip_headers->ip_p == ip_protocol_icmp) {
+      uint8_t * icmp_rest = (uint8_t *) (packet + sizeof (sr_ethernet_hdr_t) + sizeof (sr_ip_hdr_t));
+      uint8_t type = icmp_rest[0];
+      if (type == 8) {
+        sr_send_icmp_echo_message (
+          0, 
+          0, 
+          sr, 
+          ip_headers->ip_src, 
+          (uint8_t *)ip_headers
+        );
+        return; /* NOT discard packet? PREGUNTAR */
+      }
+    }
+    return; /* discard packet PREGUNTAR */
   }
 
+  /* Para una de mis interfaces. */
+  sr_if * mine_interface = sr_get_interface_given_ip(sr, ip_headers->ip_dst);
+  if (mine_interface == 0) {
+    sr_send_icmp_error_packet (
+      3, 
+      1, 
+      sr, 
+      ip_headers->ip_src, 
+      packet + sizeof (sr_ethernet_hdr_t)
+    );
+  }
+
+  uint8_t ttl = ip_headers->ip_ttl - 1;
+  if (ttl <= 0) {
+    sr_send_icmp_error_packet (
+      11, 
+      0, 
+      sr, 
+      ip_headers->ip_src, 
+      packet + sizeof (sr_ethernet_hdr_t)
+    );
+    return; /* discard packet PREGUNTAR */
+  } else {
+    ip_headers->ip_ttl = ttl;
+    ip_headers->ip_sum = ip_cksum (ip_headers, sizeof (sr_ip_hdr_t));
+  }
+  
   /*
-  Estructura void sr_handle_ip_packet:
-    get ip header from packet 
-    verify checksum in ip header
-
-    if(checksum is incorrect){
-      discard packet
-      return ?
-    } 
-
-    #? destination address from parameters or from ip header PREGUNTAR
-
-    if(this router is destination address){
-      ...
-      return ?
-    }
-
-    interface = sr_get_interface_given_ip(sr_instance,ip)
-
-    if(destination address isnt in my routing table (interface=0) )){
-      sr_send_icmp_error_packet(host unreachable)
-      return ?
-    }
-
-    get ttl from ip header and substract 1
-
-    if (ttl=0){
-      sr_send_icmp_error_packet(time exceeded)
-      return ?
-    } else {
-      update checksum
-    }
-    
     get MAC address use ARP * see function sr_handlepacket???
 
     make new ip datagram, ethernet frame
