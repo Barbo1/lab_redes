@@ -86,6 +86,10 @@ void sr_send_icmp_error_packet (
   memcpy (packet_icmp->data, ipPacket, sizeof (sr_ip_hdr_t) + 8);
   packet_icmp->icmp_sum = icmp3_cksum (packet_icmp, sizeof (sr_icmp_t3_hdr_t));
   
+  print_hdr_eth(packet);
+  print_hdr_ip(packet);
+  print_hdr_icmp(packet);
+  
   /* envio del paquete.
    * */
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
@@ -146,6 +150,10 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
   packet_icmp->icmp_type = type;
   packet_icmp->icmp_sum = icmp_cksum (packet_icmp, sizeof (sr_icmp_hdr_t));
   
+  print_hdr_eth(packet);
+  print_hdr_ip(packet);
+  print_hdr_icmp(packet);
+
   /* envio del paquete.
    * */
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
@@ -279,6 +287,9 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   new_packet_header_part_ip->ip_src = ip_to_packet;
   new_packet_header_part_ip->ip_dst = ip_headers->ip_src;
   new_packet_header_part_ip->ip_sum = ip_cksum (ip_headers, sizeof (sr_ip_hdr_t));
+  
+  print_hdr_eth(packet);
+  print_hdr_ip(packet);
 
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup(&(sr->cache), next_hop_ip);
 
