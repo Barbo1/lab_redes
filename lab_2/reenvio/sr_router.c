@@ -49,19 +49,25 @@ void sr_init(struct sr_instance* sr)
 } /* -- sr_init -- */
 
 /* Envía un paquete ICMP de error */
-void sr_send_icmp_error_packet (uint8_t type, uint8_t code, struct sr_instance *sr, uint32_t ipDst, uint8_t *ipPacket) {
-  /* Creacion del paquete. */
-  int packet_size = sizeof(sr_icmp_t3_hdr_t) + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t);
+void sr_send_icmp_error_packet (
+    uint8_t type, uint8_t code, 
+    struct sr_instance *sr, 
+    uint32_t ipDst, 
+    uint8_t *ipPacket) 
+{
+
+  /* Creacion del paquete. 
+   * */
+  int packet_size = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);
   uint8_t * packet = (uint8_t *)malloc(packet_size);
   
-  /* Headers de ethernet. */
+  /* Headers de ethernet. 
+   * */
   sr_ethernet_hdr_t * packet_ether = (sr_ethernet_hdr_t *)(packet);
-  // hay que utilizar todo lo relacionado a ARP.
-  memcpy (packet_ether->ether_dhost, <some>, ETHER_ADDR_LEN);
-  memcpy (packet_ether->ether_shost, <some>, ETHER_ADDR_LEN);
   packet_ether->ether_type = htons(ethertype_ip);
 
-  /* Headers de ip. */
+  /* Headers de ip. 
+   * */
   sr_ip_hdr_t * packet_ip = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   memcpy ((uint8_t *)packet_ip, ipPacket, sizeof(sr_ip_hdr_t));
   packet_ip->ip_ttl = 32;
@@ -69,30 +75,52 @@ void sr_send_icmp_error_packet (uint8_t type, uint8_t code, struct sr_instance *
   packet_ip->ip_dst = ipDst;
   packet_ip->ip_sum = ip_cksum ((sr_ip_hdr_t *)packet_ip, sizeof(sr_ip_hdr_t));
 
-  /* Headers de icmp. */
+  /* Headers de icmp. 
+   * */
   sr_icmp_t3_hdr_t * packet_icmp = (sr_icmp_t3_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
   packet_icmp->icmp_code = code;
   packet_icmp->icmp_type = type;
   packet_icmp->icmp_sum = 0;
   packet_icmp->next_mtu = 0;
   packet_icmp->unused = 0;
-  
-  /* ingreso de datos en el campo de datos.
-   * */
-  for (int i = 0; i < sizeof (sr_ip_hdr_t) + 8; i++) {
-    packet_icmp->data[i] = ipPacket[i];
-  }
-
+  memcpy (packet_icmp->data, ipPacket, sizeof (sr_ip_hdr_t) + 8);
   packet_icmp->icmp_sum = icmp3_cksum (packet_icmp, sizeof (sr_icmp_t3_hdr_t));
-
+  
   /* envio del paquete.
    * */
-  sr_send_packet (
-    sr, 
-    packet, 
-    packet_size, 
-    sr_get_interface_given_ip(sr, ipDst)->name
-  );
+  sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
+
+  /* Se conoce la MAC. 
+   * */
+  if (entrada_cache) {
+    struct sr_if * mine_interface = sr_get_interface_given_ip(sr, ipDst);
+    memcpy (packet_ether->ether_dhost, mine_interface->addr, ETHER_ADDR_LEN);
+    memcpy (packet_ether->ether_shost, sr, ETHER_ADDR_LEN);
+
+    /* envio del paquete.
+     * */
+    sr_send_packet (
+      sr, 
+      packet, 
+      packet_size, 
+      mine_interface->name
+    );
+
+    free(entrada_cache);
+
+  /* NO se conoce la MAC. 
+   * */
+  } else {
+    sr_arpreq * req = sr_arpcache_queuereq (
+      &(sr->cache), 
+      ipDst, 
+      packet, 
+      packet_size, 
+      sr_get_interface_given_ip(sr, ipDst)->name
+    );
+
+    handle_arpreq (sr, req);
+  }
 } /* -- sr_send_icmp_error_packet -- */
 
 void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *sr, uint32_t ipDst, uint8_t *ipPacket) {
@@ -102,9 +130,6 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
   
   /* Headers de ethernet. */
   sr_ethernet_hdr_t * packet_ether = (sr_ethernet_hdr_t *)(packet);
-  // hay que utilizar todo lo relacionado a ARP.
-  memcpy (packet_ether->ether_dhost, <some>, ETHER_ADDR_LEN);
-  memcpy (packet_ether->ether_shost, <some>, ETHER_ADDR_LEN);
   packet_ether->ether_type = htons(ethertype_ip);
 
   /* Headers de ip. */
@@ -120,15 +145,61 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
   packet_icmp->icmp_code = code;
   packet_icmp->icmp_type = type;
   packet_icmp->icmp_sum = icmp_cksum (packet_icmp, sizeof (sr_icmp_hdr_t));
-
+  
   /* envio del paquete.
    * */
-  sr_send_packet (
-    sr, 
-    packet, 
-    packet_size, 
-    sr_get_interface_given_ip(sr, ipDst)->name
-  );
+  sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
+
+  /* Se conoce la MAC. 
+   * */
+  if (entrada_cache) {
+    struct sr_if * mine_interface = sr_get_interface_given_ip(sr, ipDst);
+    memcpy (packet_ether->ether_dhost, mine_interface->addr, ETHER_ADDR_LEN);
+    memcpy (packet_ether->ether_shost, sr, ETHER_ADDR_LEN);
+
+    /* envio del paquete.
+     * */
+    sr_send_packet (
+      sr, 
+      packet, 
+      packet_size, 
+      mine_interface->name
+    );
+
+    free(entrada_cache);
+
+  /* NO se conoce la MAC. 
+   * */
+  } else {
+    sr_arpreq * req = sr_arpcache_queuereq (
+      &(sr->cache), 
+      ipDst, 
+      packet, 
+      packet_size, 
+      sr_get_interface_given_ip(sr, ipDst)->name
+    );
+
+    handle_arpreq (sr, req);
+  }
+}
+
+
+uint32_t find_st_entry (struct sr_instance *sr, uint32_t ipDst, uint32_t * ip_net) {
+  struct sr_rt * first = sr->routing_table;
+  uint32_t better_matched_bits = 0;
+
+  while (first) {
+    uint32_t masked_ip = ipDst & first->mask.s_addr;
+    uint32_t matched_bits = masked_ip ^ first->dest.s_addr;
+    if (0 < matched_bits && matched_bits < better_matched_bits) {
+      *ip_net = first->gw.s_addr;
+      better_matched_bits = matched_bits;
+    }
+
+    first = first->next;
+  }
+
+  return better_matched_bits;
 }
 
 void sr_handle_ip_packet(struct sr_instance *sr,
@@ -139,49 +210,41 @@ void sr_handle_ip_packet(struct sr_instance *sr,
         char *interface /* lent */,
         sr_ethernet_hdr_t *eHdr) {
 
-  /* 
-  * COLOQUE ASÍ SU CÓDIGO
-  * SUGERENCIAS: 
-  * - Obtener el cabezal IP y direcciones 
-  * - Verificar si el paquete es para una de mis interfaces o si hay una coincidencia en mi tabla de enrutamiento 
-  * - Si no es para una de mis interfaces y no hay coincidencia en la tabla de enrutamiento, enviar ICMP net unreachable
-  * - Sino, si es para mí, verificar si es un paquete ICMP echo request y responder con un echo reply 
-  * -(SI ES PARA UNA DE ) Sino, verificar TTL, ARP y reenviar si corresponde (puede necesitar una solicitud ARP y esperar la respuesta)
-  * - No olvide imprimir los mensajes de depuración
-  */
-
-  /* se asume que el unico header encima del ip es el ethernet. */
-  if (len <= sizeof (sr_ethernet_hdr_t)) {
-    return; /* discard packet PREGUNTAR */
-  }
-  
   sr_ip_hdr_t * ip_headers = (sr_ip_hdr_t *) (packet + sizeof (sr_ethernet_hdr_t));
+  uint32_t ip_to_packet = ip_headers->ip_dst;
+
+  if (len <= sizeof (sr_ethernet_hdr_t)) {
+    return; /* discard packet. */
+  }
 
   if (ip_headers->ip_sum == ip_cksum (ip_headers, sizeof (sr_ip_hdr_t))) {
-    return; /* discard packet */
+    return; /* discard packet. */
   }
 
-  if (ip_headers->ip_dst == sr->sr_addr.sin_addr.s_addr) {
+  struct sr_if * mine_interface = sr_get_interface_given_ip(sr, ip_to_packet);
+
+  /* El paquete es para una de mis interfaces. */
+  if (mine_interface == 0) {
     if (ip_headers->ip_p == ip_protocol_icmp) {
-      uint8_t * icmp_rest = (uint8_t *) (packet + sizeof (sr_ethernet_hdr_t) + sizeof (sr_ip_hdr_t));
-      uint8_t type = icmp_rest[0];
+      uint8_t type = ((uint8_t *) (packet + sizeof (sr_ethernet_hdr_t) + sizeof (sr_ip_hdr_t)))[0];
       if (type == 8) {
         sr_send_icmp_echo_message (
           0, 
           0, 
           sr, 
-          ip_headers->ip_src, 
+          ip_to_packet, 
           (uint8_t *)ip_headers
         );
-        return; /* NOT discard packet? PREGUNTAR */
-      }
+      } /* debe haber else? */
     }
     return; /* discard packet PREGUNTAR */
   }
 
-  /* Para una de mis interfaces. */
-  sr_if * mine_interface = sr_get_interface_given_ip(sr, ip_headers->ip_dst);
-  if (mine_interface == 0) {
+  uint32_t next_hop_ip;
+  uint32_t found_better_match = find_st_entry (sr, ip_to_packet, &next_hop_ip);
+
+  /* No pertenece a la routing table. */
+  if (found_better_match == 0) {
     sr_send_icmp_error_packet (
       3, 
       1, 
@@ -191,6 +254,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
     );
   }
 
+  /* El no es el adecuado. */
   uint8_t ttl = ip_headers->ip_ttl - 1;
   if (ttl <= 0) {
     sr_send_icmp_error_packet (
@@ -201,20 +265,51 @@ void sr_handle_ip_packet(struct sr_instance *sr,
       packet + sizeof (sr_ethernet_hdr_t)
     );
     return; /* discard packet PREGUNTAR */
-  } else {
-    ip_headers->ip_ttl = ttl;
-    ip_headers->ip_sum = ip_cksum (ip_headers, sizeof (sr_ip_hdr_t));
   }
-  
-  /*
-    get MAC address use ARP * see function sr_handlepacket???
+ 
+  /* Creacion del paquete para el envio. */
+  int new_packet_size = sizeof(sr_ethernet_hdr_t) + sizeof(uint8_t) * len;
+  uint8_t * new_packet = (uint8_t *)malloc(sizeof(sr_ethernet_hdr_t) + sizeof(uint8_t) * len);
+  sr_ip_hdr_t * new_packet_header_part_ip = (sr_ip_hdr_t *) new_packet;
+  sr_ethernet_hdr_t * new_packet_header_part_ether = (sr_ethernet_hdr_t *) new_packet;
+  memcpy(new_packet, packet, sizeof(uint8_t) * len);
 
-    make new ip datagram, ethernet frame
-    sr_send_packet(sr_instance sr, uint8_t buf, len,interface
-  {
-    return
+  new_packet_header_part_ether->ether_type = eHdr->ether_type;
+  new_packet_header_part_ip->ip_ttl = ttl;
+  new_packet_header_part_ip->ip_src = ip_to_packet;
+  new_packet_header_part_ip->ip_dst = ip_headers->ip_src;
+  new_packet_header_part_ip->ip_sum = ip_cksum (ip_headers, sizeof (sr_ip_hdr_t));
 
-*/
+  sr_arpentry * entrada_cache = sr_arpcache_lookup(&(sr->cache), next_hop_ip);
+
+  /* Se conoce la MAC. */
+  if (entrada_cache) {
+    memcpy(new_packet_header_part_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
+    memcpy(new_packet_header_part_ether->ether_shost, destAddr, ETHER_ADDR_LEN);
+
+    sr_send_packet (
+      sr, 
+      new_packet, 
+      new_packet_size, 
+      sr_get_interface_given_ip(sr, entrada_cache->ip)->name
+    );
+
+    free(entrada_cache);
+
+  /* NO se conoce la MAC. */
+  } else {
+    sr_arpreq * req = sr_arpcache_queuereq(
+      &(sr->cache), 
+      next_hop_ip, 
+      new_packet, 
+      new_packet_size,
+      interface
+    );
+
+    handle_arpreq (sr, req);
+  }
+
+  return;
 }
 
 /* 
