@@ -56,7 +56,7 @@ void sr_send_icmp_error_packet (
     uint8_t *ipPacket) 
 {
 
-  printf("### -> Sending a ICMP error packet");
+  printf("### -> Sending a ICMP error packet\n");
 
   /* Creacion del paquete. 
    * */
@@ -99,7 +99,7 @@ void sr_send_icmp_error_packet (
   /* Se conoce la MAC. 
    * */
   if (entrada_cache) {
-    printf("#### -> Found MAC in the cache");
+    printf("#### -> Found MAC in the cache\n");
 
     struct sr_if * mine_interface = sr_get_interface_given_ip(sr, ipDst);
     memcpy (packet_ether->ether_dhost, mine_interface->addr, ETHER_ADDR_LEN);
@@ -119,7 +119,7 @@ void sr_send_icmp_error_packet (
   /* NO se conoce la MAC. 
    * */
   } else {
-    printf("#### -> MAC not found");
+    printf("#### -> MAC not found\n");
 
     struct sr_arpreq * req = sr_arpcache_queuereq (
       &(sr->cache), 
@@ -134,7 +134,7 @@ void sr_send_icmp_error_packet (
 } /* -- sr_send_icmp_error_packet -- */
 
 void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *sr, uint32_t ipDst, uint8_t *ipPacket) {
-  printf("### -> Sending a ICMP echo message");
+  printf("### -> Sending a ICMP echo message\n");
 
   /* Creacion del paquete. */
   int packet_size = sizeof(sr_icmp_hdr_t) + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t);
@@ -169,7 +169,7 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
   /* Se conoce la MAC. 
    * */
   if (entrada_cache) {
-    printf("#### -> Found MAC in the cache");
+    printf("#### -> Found MAC in the cache\n");
 
     struct sr_if * mine_interface = sr_get_interface_given_ip(sr, ipDst);
     memcpy (packet_ether->ether_dhost, mine_interface->addr, ETHER_ADDR_LEN);
@@ -189,7 +189,7 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
   /* NO se conoce la MAC. 
    * */
   } else {
-    printf("#### -> MAC not found");
+    printf("#### -> MAC not found\n");
 
     struct sr_arpreq * req = sr_arpcache_queuereq (
       &(sr->cache), 
@@ -230,23 +230,26 @@ void sr_handle_ip_packet(struct sr_instance *sr,
         char *interface /* lent */,
         sr_ethernet_hdr_t *eHdr) {
 
-  printf("### -> Sending a IP packet");
+  printf("### -> Sending a IP packet\n");
 
   sr_ip_hdr_t * ip_headers = (sr_ip_hdr_t *) (packet + sizeof (sr_ethernet_hdr_t));
   uint32_t ip_to_packet = ip_headers->ip_dst;
 
   struct sr_if * mine_interface = sr_get_interface_given_ip(sr, ip_to_packet);
+  
+  printf("the IP to evaluate is: \n");
+  print_hdr_ip(packet);
 
   /* El paquete es para una de mis interfaces. */
   if (mine_interface == 0) {
-    printf("#### -> Its a packet for one of my interfaces.");
+    printf("#### -> Its a packet for one of my interfaces.\n");
 
     if (ip_headers->ip_p == ip_protocol_icmp) {
-      printf("##### -> Its a ICMP packet.");
+      printf("##### -> Its a ICMP packet.\n");
 
       uint8_t type = ((uint8_t *) (packet + sizeof (sr_ethernet_hdr_t) + sizeof (sr_ip_hdr_t)))[0];
       if (type == 8) {
-        printf("###### -> Its an echo reply.");
+        printf("###### -> Its an echo reply.\n");
 
         sr_send_icmp_echo_message (
           0, 
@@ -256,22 +259,22 @@ void sr_handle_ip_packet(struct sr_instance *sr,
           (uint8_t *)ip_headers
         );
       } else {
-        printf("###### -> Its NOT an echo reply.");
+        printf("###### -> Its NOT an echo reply.\n");
       }
     } else {
-      printf("##### -> Its NOT a ICMP packet.");
+      printf("##### -> Its NOT a ICMP packet.\n");
     }
     return; /* discard packet PREGUNTAR */
   }
   
-  printf("#### -> Niether of my interfaces match.");
+  printf("#### -> Niether of my interfaces match.\n");
 
   uint32_t next_hop_ip;
   uint32_t found_better_match = find_st_entry (sr, ip_to_packet, &next_hop_ip);
 
   /* No pertenece a la routing table. */
   if (found_better_match == 0) {
-    printf("#### -> Not found a match in the forwarding table. Sending a ICMP error: 'host unreachable'.");
+    printf("#### -> Not found a match in the forwarding table. Sending a ICMP error: 'host unreachable'.\n");
 
     sr_send_icmp_error_packet (
       3, 
@@ -282,12 +285,12 @@ void sr_handle_ip_packet(struct sr_instance *sr,
     );
   }
     
-  printf("#### -> Found a match in the forwarding table.");
+  printf("#### -> Found a match in the forwarding table.\n");
 
   /* El no es el adecuado. */
   uint8_t ttl = ip_headers->ip_ttl - 1;
   if (ttl <= 0) {
-    printf("#### -> Insuficient TTL. Sending a ICMP error: 'time to live exceeded'.");
+    printf("#### -> Insuficient TTL. Sending a ICMP error: 'time to live exceeded'.\n");
 
     sr_send_icmp_error_packet (
       11, 
@@ -299,7 +302,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
     return; /* discard packet PREGUNTAR */
   }
  
-  printf("#### -> Constructing the packet.");
+  printf("#### -> Constructing the packet.\n");
 
   /* Creacion del paquete para el envio. */
   int new_packet_size = sizeof(sr_ethernet_hdr_t) + sizeof(uint8_t) * len;
@@ -321,7 +324,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
 
   /* Se conoce la MAC. */
   if (entrada_cache) {
-    printf("#### -> Found MAC in the cache");
+    printf("#### -> Found MAC in the cache.\n");
 
     memcpy(new_packet_header_part_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
     memcpy(new_packet_header_part_ether->ether_shost, destAddr, ETHER_ADDR_LEN);
@@ -337,7 +340,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
 
   /* NO se conoce la MAC. */
   } else {
-    printf("#### -> MAC not found");
+    printf("#### -> MAC not found.\n");
 
     struct sr_arpreq * req = sr_arpcache_queuereq(
       &(sr->cache), 
