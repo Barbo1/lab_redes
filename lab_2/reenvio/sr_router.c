@@ -88,7 +88,7 @@ void sr_send_icmp_error_packet (
   
   /* envio del paquete.
    * */
-  sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
+  struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
 
   /* Se conoce la MAC. 
    * */
@@ -111,7 +111,7 @@ void sr_send_icmp_error_packet (
   /* NO se conoce la MAC. 
    * */
   } else {
-    sr_arpreq * req = sr_arpcache_queuereq (
+    struct sr_arpreq * req = sr_arpcache_queuereq (
       &(sr->cache), 
       ipDst, 
       packet, 
@@ -148,7 +148,7 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
   
   /* envio del paquete.
    * */
-  sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
+  struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
 
   /* Se conoce la MAC. 
    * */
@@ -171,7 +171,7 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
   /* NO se conoce la MAC. 
    * */
   } else {
-    sr_arpreq * req = sr_arpcache_queuereq (
+    struct sr_arpreq * req = sr_arpcache_queuereq (
       &(sr->cache), 
       ipDst, 
       packet, 
@@ -280,7 +280,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   new_packet_header_part_ip->ip_dst = ip_headers->ip_src;
   new_packet_header_part_ip->ip_sum = ip_cksum (ip_headers, sizeof (sr_ip_hdr_t));
 
-  sr_arpentry * entrada_cache = sr_arpcache_lookup(&(sr->cache), next_hop_ip);
+  struct sr_arpentry * entrada_cache = sr_arpcache_lookup(&(sr->cache), next_hop_ip);
 
   /* Se conoce la MAC. */
   if (entrada_cache) {
@@ -298,7 +298,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
 
   /* NO se conoce la MAC. */
   } else {
-    sr_arpreq * req = sr_arpcache_queuereq(
+    struct sr_arpreq * req = sr_arpcache_queuereq(
       &(sr->cache), 
       next_hop_ip, 
       new_packet, 
