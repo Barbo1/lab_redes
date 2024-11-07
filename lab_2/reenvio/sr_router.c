@@ -329,10 +329,9 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   printf("#### -> Constructing the packet.\n");
 
   /* Creacion del paquete para el envio. */
-  int new_packet_size = sizeof(sr_ethernet_hdr_t) + sizeof(uint8_t) * len;
-  uint8_t * new_packet = (uint8_t *)malloc(sizeof(sr_ethernet_hdr_t) + sizeof(uint8_t) * len);
-  sr_ip_hdr_t * new_packet_header_part_ip = (sr_ip_hdr_t *) new_packet;
+  uint8_t * new_packet = (uint8_t *)malloc(sizeof(uint8_t) * len);
   sr_ethernet_hdr_t * new_packet_header_part_ether = (sr_ethernet_hdr_t *) new_packet;
+  sr_ip_hdr_t * new_packet_header_part_ip = (sr_ip_hdr_t *) (new_packet + sizeof(sr_ethernet_hdr_t));
   memcpy(new_packet, packet, sizeof(uint8_t) * len);
 
   new_packet_header_part_ether->ether_type = eHdr->ether_type;
@@ -345,11 +344,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   print_hdr_ip(new_packet + sizeof(sr_ethernet_hdr_t));
 
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup(&(sr->cache), next_hop_ip);
-  struct sr_if * out_interface = sr_get_interface_given_ip(sr, next_hop_ip);
-
-  sr_print_if_list(sr);
-  printf("-----------------------------\n");
-  sr_print_if(out_interface);
+  struct sr_if * out_interface = sr_get_interface (sr, matched_rt->interface);
 
   /* Se conoce la MAC. */
   if (entrada_cache) {
@@ -368,7 +363,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
     sr_send_packet (
       sr, 
       new_packet, 
-      new_packet_size, 
+      len, 
       out_interface->name
     );
 
@@ -384,7 +379,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
       &(sr->cache), 
       next_hop_ip, 
       new_packet, 
-      new_packet_size,
+      len,
       out_interface->name
     );
 
