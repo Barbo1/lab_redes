@@ -48,161 +48,6 @@ void sr_init(struct sr_instance* sr)
 
 } /* -- sr_init -- */
 
-/* Envía un paquete ICMP de error */
-void sr_send_icmp_error_packet (
-    uint8_t type, uint8_t code, 
-    struct sr_instance *sr, 
-    uint32_t ipDst, 
-    uint8_t *ipPacket) 
-{
-
-  printf("### -> Sending a ICMP error packet\n");
-
-  /* Creacion del paquete. 
-   * */
-  int packet_size = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);
-  uint8_t * packet = (uint8_t *)malloc(packet_size);
-  
-  /* Headers de ethernet. 
-   * */
-  sr_ethernet_hdr_t * packet_ether = (sr_ethernet_hdr_t *)(packet);
-  packet_ether->ether_type = htons(ethertype_ip);
-
-  /* Headers de ip. 
-   * */
-  sr_ip_hdr_t * packet_ip = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
-  memcpy ((uint8_t *)packet_ip, ipPacket, sizeof(sr_ip_hdr_t));
-  packet_ip->ip_ttl = 32;
-  packet_ip->ip_src = sr->sr_addr.sin_addr.s_addr; 
-  packet_ip->ip_dst = ipDst;
-  packet_ip->ip_sum = ip_cksum ((sr_ip_hdr_t *)packet_ip, sizeof(sr_ip_hdr_t));
-
-  /* Headers de icmp. 
-   * */
-  sr_icmp_t3_hdr_t * packet_icmp = (sr_icmp_t3_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-  packet_icmp->icmp_code = code;
-  packet_icmp->icmp_type = type;
-  packet_icmp->icmp_sum = 0;
-  packet_icmp->next_mtu = 0;
-  packet_icmp->unused = 0;
-  memcpy (packet_icmp->data, ipPacket, sizeof (sr_ip_hdr_t) + 8);
-  packet_icmp->icmp_sum = icmp3_cksum (packet_icmp, sizeof (sr_icmp_t3_hdr_t));
-  
-  print_hdr_eth(packet);
-  print_hdr_ip(packet);
-  print_hdr_icmp(packet);
-  
-  /* envio del paquete.
-   * */
-  struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
-
-  /* Se conoce la MAC. 
-   * */
-  if (entrada_cache) {
-    printf("#### -> Found MAC in the cache\n");
-
-    struct sr_if * mine_interface = sr_get_interface_given_ip(sr, ipDst);
-    memcpy (packet_ether->ether_dhost, mine_interface->addr, ETHER_ADDR_LEN);
-    memcpy (packet_ether->ether_shost, sr, ETHER_ADDR_LEN);
-
-    /* envio del paquete.
-     * */
-    sr_send_packet (
-      sr, 
-      packet, 
-      packet_size, 
-      mine_interface->name
-    );
-
-    free(entrada_cache);
-
-  /* NO se conoce la MAC. 
-   * */
-  } else {
-    printf("#### -> MAC not found\n");
-
-    struct sr_arpreq * req = sr_arpcache_queuereq (
-      &(sr->cache), 
-      ipDst, 
-      packet, 
-      packet_size, 
-      sr_get_interface_given_ip(sr, ipDst)->name
-    );
-
-    handle_arpreq (sr, req);
-  }
-} /* -- sr_send_icmp_error_packet -- */
-
-void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *sr, uint32_t ipDst, uint8_t *ipPacket) {
-  printf("### -> Sending a ICMP echo message\n");
-
-  /* Creacion del paquete. */
-  int packet_size = sizeof(sr_icmp_hdr_t) + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t);
-  uint8_t * packet = (uint8_t *)malloc(packet_size);
-  
-  /* Headers de ethernet. */
-  sr_ethernet_hdr_t * packet_ether = (sr_ethernet_hdr_t *)(packet);
-  packet_ether->ether_type = htons(ethertype_ip);
-
-  /* Headers de ip. */
-  sr_ip_hdr_t * packet_ip = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
-  memcpy ((uint8_t *)packet_ip, ipPacket, sizeof(sr_ip_hdr_t));
-  packet_ip->ip_ttl = 32;
-  packet_ip->ip_src = sr->sr_addr.sin_addr.s_addr; 
-  packet_ip->ip_dst = ipDst;
-  packet_ip->ip_sum = ip_cksum ((sr_ip_hdr_t *)packet_ip, sizeof(sr_ip_hdr_t));
-
-  /* Headers de icmp. */
-  sr_icmp_hdr_t * packet_icmp = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-  packet_icmp->icmp_code = code;
-  packet_icmp->icmp_type = type;
-  packet_icmp->icmp_sum = icmp_cksum (packet_icmp, sizeof (sr_icmp_hdr_t));
-  
-  print_hdr_eth(packet);
-  print_hdr_ip(packet);
-  print_hdr_icmp(packet);
-
-  /* envio del paquete.
-   * */
-  struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
-
-  /* Se conoce la MAC. 
-   * */
-  if (entrada_cache) {
-    printf("#### -> Found MAC in the cache\n");
-
-    struct sr_if * mine_interface = sr_get_interface_given_ip(sr, ipDst);
-    memcpy (packet_ether->ether_dhost, mine_interface->addr, ETHER_ADDR_LEN);
-    memcpy (packet_ether->ether_shost, sr, ETHER_ADDR_LEN);
-
-    /* envio del paquete.
-     * */
-    sr_send_packet (
-      sr, 
-      packet, 
-      packet_size, 
-      mine_interface->name
-    );
-
-    free(entrada_cache);
-
-  /* NO se conoce la MAC. 
-   * */
-  } else {
-    printf("#### -> MAC not found\n");
-
-    struct sr_arpreq * req = sr_arpcache_queuereq (
-      &(sr->cache), 
-      ipDst, 
-      packet, 
-      packet_size, 
-      sr_get_interface_given_ip(sr, ipDst)->name
-    );
-
-    handle_arpreq (sr, req);
-  }
-}
-
 
 uint32_t find_st_entry (struct sr_instance *sr, uint32_t ipDst, uint32_t * ip_net) {
   struct sr_rt * first = sr->routing_table;
@@ -220,6 +65,171 @@ uint32_t find_st_entry (struct sr_instance *sr, uint32_t ipDst, uint32_t * ip_ne
   }
 
   return better_matched_bits;
+}
+
+/* Envía un paquete ICMP de error */
+void sr_send_icmp_error_packet (
+    uint8_t type, uint8_t code, 
+    struct sr_instance *sr, 
+    uint32_t ipDst, 
+    uint8_t *ipPacket) 
+{
+
+  printf("### -> Sending a ICMP error packet.\n");
+
+  /* Creacion del paquete. 
+   * */
+  int packet_size = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);
+  uint8_t * packet = (uint8_t *)malloc(packet_size);
+
+  uint32_t next_hop_ip;
+  if (find_st_entry (sr, ipDst, &next_hop_ip)) {
+    printf("#### -> The IP to send was not found.\n");
+  }
+  
+  /* Headers de ethernet. 
+   * */
+  sr_ethernet_hdr_t * packet_ether = (sr_ethernet_hdr_t *)(packet);
+  packet_ether->ether_type = htons(ethertype_ip);
+  struct sr_if * mine_interface = sr_get_interface_given_ip(sr, next_hop_ip);
+
+  /* Headers de ip. 
+   * */
+  sr_ip_hdr_t * packet_ip = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+  memcpy ((uint8_t *)packet_ip, ipPacket, sizeof(sr_ip_hdr_t));
+  packet_ip->ip_ttl = 32;
+  packet_ip->ip_src = next_hop_ip; 
+  packet_ip->ip_dst = ipDst;
+  packet_ip->ip_sum = ip_cksum ((sr_ip_hdr_t *)packet_ip, sizeof(sr_ip_hdr_t));
+
+  /* Headers de icmp. 
+   * */
+  sr_icmp_t3_hdr_t * packet_icmp = (sr_icmp_t3_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  packet_icmp->icmp_code = code;
+  packet_icmp->icmp_type = type;
+  packet_icmp->icmp_sum = 0;
+  packet_icmp->next_mtu = 0;
+  packet_icmp->unused = 0;
+  memcpy (packet_icmp->data, ipPacket, sizeof (sr_ip_hdr_t) + 8);
+  packet_icmp->icmp_sum = icmp3_cksum (packet_icmp, sizeof (sr_icmp_t3_hdr_t));
+  
+  print_hdr_eth(packet);
+  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+  
+  /* envio del paquete.
+   * */
+  struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
+
+  /* Se conoce la MAC. 
+   * */
+  if (entrada_cache) {
+    printf("#### -> Found MAC in the cache\n");
+
+    memcpy (packet_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
+    memcpy (packet_ether->ether_shost, mine_interface->addr, ETHER_ADDR_LEN);
+
+    /* envio del paquete.
+     * */
+    sr_send_packet (
+      sr, 
+      packet, 
+      packet_size, 
+      mine_interface->name
+    );
+
+    free(entrada_cache);
+
+  /* NO se conoce la MAC. 
+   * */
+  } else {
+    printf("#### -> MAC not found\n");
+
+    struct sr_arpreq * req = sr_arpcache_queuereq (
+      &(sr->cache), 
+      ipDst, 
+      packet, 
+      packet_size, 
+      mine_interface->name
+    );
+
+    handle_arpreq (sr, req);
+  }
+} /* -- sr_send_icmp_error_packet -- */
+
+void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *sr, uint32_t ipDst, uint8_t *ipPacket) {
+  printf("### -> Sending a ICMP echo message\n");
+
+  /* Creacion del paquete. */
+  int packet_size = sizeof(sr_icmp_hdr_t) + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t);
+  uint8_t * packet = (uint8_t *)malloc(packet_size);
+
+  uint32_t next_hop_ip;
+  if (find_st_entry (sr, ipDst, &next_hop_ip)) {
+    printf("#### -> The IP to send was not found.\n");
+  }
+  
+  /* Headers de ethernet. 
+   * */
+  sr_ethernet_hdr_t * packet_ether = (sr_ethernet_hdr_t *)(packet);
+  packet_ether->ether_type = htons(ethertype_ip);
+  struct sr_if * mine_interface = sr_get_interface_given_ip(sr, next_hop_ip);
+
+  /* Headers de ip. 
+   * */
+  sr_ip_hdr_t * packet_ip = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+  memcpy ((uint8_t *)packet_ip, ipPacket, sizeof(sr_ip_hdr_t));
+  packet_ip->ip_ttl = 32;
+  packet_ip->ip_src = next_hop_ip; 
+  packet_ip->ip_dst = ipDst;
+  packet_ip->ip_sum = ip_cksum ((sr_ip_hdr_t *)packet_ip, sizeof(sr_ip_hdr_t));
+
+  /* Headers de icmp. */
+  sr_icmp_hdr_t * packet_icmp = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  packet_icmp->icmp_code = code;
+  packet_icmp->icmp_type = type;
+  packet_icmp->icmp_sum = icmp_cksum (packet_icmp, sizeof (sr_icmp_hdr_t));
+  
+  print_hdr_eth(packet);
+  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+  
+  /* envio del paquete.
+   * */
+  struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
+
+  /* Se conoce la MAC. 
+   * */
+  if (entrada_cache) {
+    printf("#### -> Found MAC in the cache\n");
+
+    memcpy (packet_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
+    memcpy (packet_ether->ether_shost, mine_interface->addr, ETHER_ADDR_LEN);
+
+    /* envio del paquete.
+     * */
+    sr_send_packet (
+      sr, 
+      packet, 
+      packet_size, 
+      mine_interface->name
+    );
+
+    free(entrada_cache);
+
+  /* NO se conoce la MAC. 
+   * */
+  } else {
+    printf("#### -> MAC not found\n");
+
+    struct sr_arpreq * req = sr_arpcache_queuereq (
+      &(sr->cache), 
+      ipDst, 
+      packet, 
+      packet_size, 
+      mine_interface->name
+    );
+
+    handle_arpreq (sr, req);
+  }
 }
 
 void sr_handle_ip_packet(struct sr_instance *sr,
