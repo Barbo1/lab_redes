@@ -143,7 +143,7 @@ void sr_send_icmp_error_packet (
 
     printf("Packet Sent.\n");
 
-    //free(entrada_cache);
+    /* free(entrada_cache); */
 
   /* NO se conoce la MAC. 
    * */
@@ -224,7 +224,7 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
 
     printf("Packet Sent.\n");
 
-    //free(entrada_cache);
+    /* free(entrada_cache); */
 
   /* NO se conoce la MAC. 
    * */
@@ -367,7 +367,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
 
     printf("Packet Sent.\n");
 
-    //free(entrada_cache);
+    /* free(entrada_cache); */
 
   /* NO se conoce la MAC. */
   } else {
