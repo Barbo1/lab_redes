@@ -299,7 +299,8 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   }
     
   printf("#### -> Found a match in the forwarding table.\n");
-
+  sr_print_routing_entry(matched_rt);
+  
   uint32_t next_hop_ip = matched_rt->gw.s_addr;
 
   /* El no es el adecuado. */
@@ -333,7 +334,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   new_packet_header_part_ip->ip_sum = ip_cksum (ip_headers, sizeof (sr_ip_hdr_t));
   
   print_hdr_eth(packet);
-  print_hdr_ip(packet);
+  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
 
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup(&(sr->cache), next_hop_ip);
   struct sr_if * out_interface = sr_get_interface_given_ip(sr, next_hop_ip);
