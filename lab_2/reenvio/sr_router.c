@@ -338,7 +338,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   new_packet_header_part_ip->ip_ttl = ttl;
   new_packet_header_part_ip->ip_src = ip_to_packet;
   new_packet_header_part_ip->ip_dst = ip_headers->ip_src;
-  new_packet_header_part_ip->ip_sum = ip_cksum (ip_headers, sizeof (sr_ip_hdr_t));
+  new_packet_header_part_ip->ip_sum = ip_cksum (new_packet_header_part_ip, sizeof (sr_ip_hdr_t));
   
   print_hdr_eth(new_packet);
   print_hdr_ip(new_packet + sizeof(sr_ethernet_hdr_t));
@@ -350,13 +350,8 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   if (entrada_cache) {
     printf("#### -> Found MAC in the cache.\n");
 
-    printf("#### -> 1.\n");
     memcpy(new_packet_header_part_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
-    printf("#### -> 2.\n");
     memcpy(new_packet_header_part_ether->ether_shost, out_interface->addr, ETHER_ADDR_LEN);
-    printf("#### -> 3.\n");
-
-    printf("Packet Completed.\n");
 
     /* envio del paquete.
      * */
@@ -366,8 +361,6 @@ void sr_handle_ip_packet(struct sr_instance *sr,
       len, 
       out_interface->name
     );
-
-    printf("Packet Sent.\n");
 
     /* free(entrada_cache); */
 
