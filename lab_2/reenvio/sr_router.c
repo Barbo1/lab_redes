@@ -210,8 +210,8 @@ uint32_t find_st_entry (struct sr_instance *sr, uint32_t ipDst, uint32_t * ip_ne
 
   while (first) {
     uint32_t masked_ip = ipDst & first->mask.s_addr;
-    uint32_t matched_bits = masked_ip ^ first->dest.s_addr;
-    if (0 < matched_bits && matched_bits < better_matched_bits) {
+    uint32_t matched_bits = ~(masked_ip ^ first->dest.s_addr);
+    if (0 < matched_bits && matched_bits > better_matched_bits) {
       *ip_net = first->gw.s_addr;
       better_matched_bits = matched_bits;
     }
@@ -274,7 +274,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   uint32_t found_better_match = find_st_entry (sr, ip_to_packet, &next_hop_ip);
 
   /* No pertenece a la routing table. */
-  if (found_better_match == 0) {
+  if (!found_better_match) {
     printf("#### -> Not found a match in the forwarding table. Sending a ICMP error: 'host unreachable'.\n");
 
     sr_send_icmp_error_packet (
