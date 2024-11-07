@@ -130,6 +130,8 @@ void sr_send_icmp_error_packet (
     memcpy (packet_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
     memcpy (packet_ether->ether_shost, mine_interface->addr, ETHER_ADDR_LEN);
 
+    printf("Packet Completed.\n");
+
     /* envio del paquete.
      * */
     sr_send_packet (
@@ -139,7 +141,9 @@ void sr_send_icmp_error_packet (
       mine_interface->name
     );
 
-    free(entrada_cache);
+    printf("Packet Sent.\n");
+
+    //free(entrada_cache);
 
   /* NO se conoce la MAC. 
    * */
@@ -207,6 +211,8 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
     memcpy (packet_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
     memcpy (packet_ether->ether_shost, mine_interface->addr, ETHER_ADDR_LEN);
 
+    printf("Packet Completed.\n");
+
     /* envio del paquete.
      * */
     sr_send_packet (
@@ -216,7 +222,9 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
       mine_interface->name
     );
 
-    free(entrada_cache);
+    printf("Packet Sent.\n");
+
+    //free(entrada_cache);
 
   /* NO se conoce la MAC. 
    * */
@@ -346,6 +354,10 @@ void sr_handle_ip_packet(struct sr_instance *sr,
     memcpy(new_packet_header_part_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
     memcpy(new_packet_header_part_ether->ether_shost, out_interface->addr, ETHER_ADDR_LEN);
 
+    printf("Packet Completed.\n");
+
+    /* envio del paquete.
+     * */
     sr_send_packet (
       sr, 
       new_packet, 
@@ -353,7 +365,9 @@ void sr_handle_ip_packet(struct sr_instance *sr,
       out_interface->name
     );
 
-    free(entrada_cache);
+    printf("Packet Sent.\n");
+
+    //free(entrada_cache);
 
   /* NO se conoce la MAC. */
   } else {
