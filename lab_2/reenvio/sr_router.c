@@ -49,22 +49,23 @@ void sr_init(struct sr_instance* sr)
 } /* -- sr_init -- */
 
 
-uint32_t find_st_entry (struct sr_instance *sr, uint32_t ipDst, uint32_t * ip_net) {
+struct sr_rt * find_st_entry (struct sr_instance *sr, uint32_t ipDst) {
   struct sr_rt * first = sr->routing_table;
+  struct sr_rt * better = 0;
   uint32_t better_matched_bits = 0;
 
   while (first) {
     uint32_t masked_ip = ipDst & first->mask.s_addr;
     uint32_t matched_bits = ~(masked_ip ^ first->dest.s_addr);
     if (0 < matched_bits && matched_bits > better_matched_bits) {
-      *ip_net = first->gw.s_addr;
+      better = first;
       better_matched_bits = matched_bits;
     }
 
     first = first->next;
   }
 
-  return better_matched_bits;
+  return better;
 }
 
 /* Envía un paquete ICMP de error */
@@ -82,8 +83,9 @@ void sr_send_icmp_error_packet (
   int packet_size = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t);
   uint8_t * packet = (uint8_t *)malloc(packet_size);
 
-  uint32_t next_hop_ip;
-  if (find_st_entry (sr, ipDst, &next_hop_ip)) {
+  /* Busqueda en la routing table. */
+  struct sr_rt * matched_rt = find_st_entry (sr, ipDst);
+  if (!matched_rt) {
     printf("#### -> The IP to send was not found.\n");
   }
   
@@ -91,14 +93,14 @@ void sr_send_icmp_error_packet (
    * */
   sr_ethernet_hdr_t * packet_ether = (sr_ethernet_hdr_t *)(packet);
   packet_ether->ether_type = htons(ethertype_ip);
-  struct sr_if * mine_interface = sr_get_interface_given_ip(sr, next_hop_ip);
+  struct sr_if * mine_interface = sr_get_interface (sr, matched_rt->interface);
 
   /* Headers de ip. 
    * */
   sr_ip_hdr_t * packet_ip = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   memcpy ((uint8_t *)packet_ip, ipPacket, sizeof(sr_ip_hdr_t));
   packet_ip->ip_ttl = 32;
-  packet_ip->ip_src = next_hop_ip; 
+  packet_ip->ip_src = mine_interface->ip; 
   packet_ip->ip_dst = ipDst;
   packet_ip->ip_sum = ip_cksum ((sr_ip_hdr_t *)packet_ip, sizeof(sr_ip_hdr_t));
 
@@ -118,7 +120,7 @@ void sr_send_icmp_error_packet (
   
   /* envio del paquete.
    * */
-  struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
+  struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), matched_rt->gw.s_addr);
 
   /* Se conoce la MAC. 
    * */
@@ -163,8 +165,9 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
   int packet_size = sizeof(sr_icmp_hdr_t) + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t);
   uint8_t * packet = (uint8_t *)malloc(packet_size);
 
-  uint32_t next_hop_ip;
-  if (find_st_entry (sr, ipDst, &next_hop_ip)) {
+  /* Busqueda en la routing table. */
+  struct sr_rt * matched_rt = find_st_entry (sr, ipDst);
+  if (!matched_rt) {
     printf("#### -> The IP to send was not found.\n");
   }
   
@@ -172,14 +175,14 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
    * */
   sr_ethernet_hdr_t * packet_ether = (sr_ethernet_hdr_t *)(packet);
   packet_ether->ether_type = htons(ethertype_ip);
-  struct sr_if * mine_interface = sr_get_interface_given_ip(sr, next_hop_ip);
+  struct sr_if * mine_interface = sr_get_interface (sr, matched_rt->interface);
 
   /* Headers de ip. 
    * */
   sr_ip_hdr_t * packet_ip = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   memcpy ((uint8_t *)packet_ip, ipPacket, sizeof(sr_ip_hdr_t));
   packet_ip->ip_ttl = 32;
-  packet_ip->ip_src = next_hop_ip; 
+  packet_ip->ip_src = mine_interface->ip; 
   packet_ip->ip_dst = ipDst;
   packet_ip->ip_sum = ip_cksum ((sr_ip_hdr_t *)packet_ip, sizeof(sr_ip_hdr_t));
 
@@ -194,7 +197,7 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
   
   /* envio del paquete.
    * */
-  struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), packet_ip->ip_src);
+  struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), matched_rt->gw.s_addr);
 
   /* Se conoce la MAC. 
    * */
@@ -280,11 +283,10 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   
   printf("#### -> Niether of my interfaces match.\n");
 
-  uint32_t next_hop_ip;
-  uint32_t found_better_match = find_st_entry (sr, ip_to_packet, &next_hop_ip);
+  struct sr_rt * matched_rt = find_st_entry (sr, ip_to_packet);
 
   /* No pertenece a la routing table. */
-  if (!found_better_match) {
+  if (!matched_rt) {
     printf("#### -> Not found a match in the forwarding table. Sending a ICMP error: 'host unreachable'.\n");
 
     sr_send_icmp_error_packet (
@@ -297,6 +299,8 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   }
     
   printf("#### -> Found a match in the forwarding table.\n");
+
+  uint32_t next_hop_ip = matched_rt->gw.s_addr;
 
   /* El no es el adecuado. */
   uint8_t ttl = ip_headers->ip_ttl - 1;
