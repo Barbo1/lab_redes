@@ -238,7 +238,8 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   struct sr_if * mine_interface = sr_get_interface_given_ip(sr, ip_to_packet);
   
   printf("the IP to evaluate is: \n");
-  print_hdr_ip(packet);
+  print_hdr_eth(packet);
+  print_hdr_ip(packet + sizeof (sr_ethernet_hdr_t));
 
   /* El paquete es para una de mis interfaces. */
   if (mine_interface == 0) {
