@@ -242,7 +242,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   print_hdr_ip(packet + sizeof (sr_ethernet_hdr_t));
 
   /* El paquete es para una de mis interfaces. */
-  if (mine_interface == 0) {
+  if (mine_interface != 0) {
     printf("#### -> Its a packet for one of my interfaces.\n");
 
     if (ip_headers->ip_p == ip_protocol_icmp) {
