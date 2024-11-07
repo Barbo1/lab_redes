@@ -322,19 +322,20 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   print_hdr_ip(packet);
 
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup(&(sr->cache), next_hop_ip);
+  struct sr_if * out_interface = sr_get_interface_given_ip(sr, next_hop_ip);
 
   /* Se conoce la MAC. */
   if (entrada_cache) {
     printf("#### -> Found MAC in the cache.\n");
 
     memcpy(new_packet_header_part_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
-    memcpy(new_packet_header_part_ether->ether_shost, destAddr, ETHER_ADDR_LEN);
+    memcpy(new_packet_header_part_ether->ether_shost, out_interface->addr, ETHER_ADDR_LEN);
 
     sr_send_packet (
       sr, 
       new_packet, 
       new_packet_size, 
-      sr_get_interface_given_ip(sr, entrada_cache->ip)->name
+      out_interface->name
     );
 
     free(entrada_cache);
@@ -348,7 +349,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
       next_hop_ip, 
       new_packet, 
       new_packet_size,
-      interface
+      out_interface->name
     );
 
     handle_arpreq (sr, req);
