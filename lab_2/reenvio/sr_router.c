@@ -347,6 +347,10 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup(&(sr->cache), next_hop_ip);
   struct sr_if * out_interface = sr_get_interface_given_ip(sr, next_hop_ip);
 
+  sr_print_if_list(sr);
+  printf("-----------------------------\n");
+  sr_print_if(out_interface);
+
   /* Se conoce la MAC. */
   if (entrada_cache) {
     printf("#### -> Found MAC in the cache.\n");
