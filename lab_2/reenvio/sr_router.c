@@ -143,7 +143,7 @@ void sr_send_icmp_error_packet (
 
     printf("Packet Sent.\n");
 
-    /* free(entrada_cache); */
+    free(entrada_cache);
 
   /* NO se conoce la MAC. 
    * */
@@ -152,7 +152,7 @@ void sr_send_icmp_error_packet (
 
     struct sr_arpreq * req = sr_arpcache_queuereq (
       &(sr->cache), 
-      ipDst, 
+      matched_rt->gw.s_addr, 
       packet, 
       packet_size, 
       mine_interface->name
@@ -224,7 +224,7 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
 
     printf("Packet Sent.\n");
 
-    /* free(entrada_cache); */
+    free(entrada_cache);
 
   /* NO se conoce la MAC. 
    * */
@@ -233,7 +233,7 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
 
     struct sr_arpreq * req = sr_arpcache_queuereq (
       &(sr->cache), 
-      ipDst, 
+      matched_rt->gw.s_addr, 
       packet, 
       packet_size, 
       mine_interface->name
@@ -362,7 +362,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
       out_interface->name
     );
 
-    /* free(entrada_cache); */
+    free(entrada_cache);
 
   /* NO se conoce la MAC. */
   } else {
