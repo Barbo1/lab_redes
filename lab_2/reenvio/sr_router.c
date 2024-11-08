@@ -116,10 +116,6 @@ void sr_send_icmp_error_packet (
   memcpy (packet_icmp->data, ipPacket, sizeof (sr_ip_hdr_t) + 8);
   packet_icmp->icmp_sum = icmp3_cksum (packet_icmp, sizeof (sr_icmp_t3_hdr_t));
   
-  print_hdr_eth(packet);
-  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-  print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-  
   /* envio del paquete.
    * */
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), matched_rt->gw.s_addr);
@@ -132,7 +128,7 @@ void sr_send_icmp_error_packet (
     memcpy (packet_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
     memcpy (packet_ether->ether_shost, mine_interface->addr, ETHER_ADDR_LEN);
 
-    printf("Packet Completed.\n");
+    printf("#### -> Packet Completed.\n");
 
     /* envio del paquete.
      * */
@@ -143,7 +139,12 @@ void sr_send_icmp_error_packet (
       mine_interface->name
     );
 
-    printf("Packet Sent.\n");
+    printf("#### -> Packet Sent.\n");
+    
+    printf("### -> Packet Info:\n");
+    print_hdr_eth(packet);
+    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
     free(entrada_cache);
 
@@ -159,6 +160,11 @@ void sr_send_icmp_error_packet (
       packet_size, 
       mine_interface->name
     );
+
+    printf("### -> Packet Info:\n");
+    print_hdr_eth(packet);
+    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
     handle_arpreq (sr, req);
   }
@@ -255,7 +261,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
         char *interface /* lent */,
         sr_ethernet_hdr_t *eHdr) {
 
-  printf("### -> Sending a IP packet\n");
+  printf("### -> Handling a IP packet\n");
 
   sr_ip_hdr_t * ip_headers = (sr_ip_hdr_t *) (packet + sizeof (sr_ethernet_hdr_t));
   uint32_t ip_to_packet = ip_headers->ip_dst;
@@ -382,6 +388,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
     handle_arpreq (sr, req);
   }
 
+  free(new_packet);
   return;
 }
 
