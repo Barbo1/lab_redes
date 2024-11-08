@@ -180,6 +180,7 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
   sr_ethernet_hdr_t * packet_ether = (sr_ethernet_hdr_t *)(packet);
   packet_ether->ether_type = htons(ethertype_ip);
   struct sr_if * mine_interface = sr_get_interface (sr, matched_rt->interface);
+  sr_print_if(mine_interface);
 
   /* Headers de ip. 
    * */
@@ -198,6 +199,7 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
   
   print_hdr_eth(packet);
   print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+  print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
   
   /* envio del paquete.
    * */
@@ -262,6 +264,21 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   print_hdr_eth(packet);
   print_hdr_ip(packet + sizeof (sr_ethernet_hdr_t));
 
+  /* El TLL no es el adecuado. */
+  uint8_t ttl = ip_headers->ip_ttl - 1;
+  if (ttl <= 0) {
+    printf("#### -> Insuficient TTL. Sending a ICMP error: 'time to live exceeded'.\n");
+
+    sr_send_icmp_error_packet (
+      11, 
+      0, 
+      sr, 
+      ip_headers->ip_src, 
+      packet + sizeof (sr_ethernet_hdr_t)
+    );
+    return;
+  }
+
   /* El paquete es para una de mis interfaces. */
   if (mine_interface != 0) {
     printf("#### -> Its a packet for one of my interfaces.\n");
@@ -310,22 +327,6 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   sr_print_routing_entry(matched_rt);
   
   uint32_t next_hop_ip = matched_rt->gw.s_addr;
-
-  /* El no es el adecuado. */
-  uint8_t ttl = ip_headers->ip_ttl - 1;
-  if (ttl <= 0) {
-    printf("#### -> Insuficient TTL. Sending a ICMP error: 'time to live exceeded'.\n");
-
-    sr_send_icmp_error_packet (
-      11, 
-      0, 
-      sr, 
-      ip_headers->ip_src, 
-      packet + sizeof (sr_ethernet_hdr_t)
-    );
-    return; /* discard packet PREGUNTAR */
-  }
- 
   printf("#### -> Constructing the packet.\n");
 
   /* Creacion del paquete para el envio. */
