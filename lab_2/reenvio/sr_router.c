@@ -219,7 +219,7 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
    * */
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), matched_rt->gw.s_addr);
   print_addr_eth(mine_interface->addr);
-  print_addr_eth(entrada_cache->mac);
+  print_addr_eth((uint8_t *)entrada_cache->mac);
 
   /* Se conoce la MAC. 
    * */
