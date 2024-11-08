@@ -215,13 +215,11 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
   packet_icmp->icmp_type = type;
   packet_icmp->icmp_sum = icmp_cksum (packet_icmp, sizeof (sr_icmp_hdr_t));
   
-  print_hdr_eth(packet);
-  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-  print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-  
   /* envio del paquete.
    * */
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), matched_rt->gw.s_addr);
+  print_addr_eth(mine_interface->addr);
+  print_addr_eth(entrada_cache->mac);
 
   /* Se conoce la MAC. 
    * */
@@ -231,7 +229,13 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
     memcpy (packet_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
     memcpy (packet_ether->ether_shost, mine_interface->addr, ETHER_ADDR_LEN);
 
-    printf("Packet Completed.\n");
+    printf("--------------------------------------\n");
+    printf("### -> Packet Info:\n");
+    print_hdr_eth(packet);
+    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+
+    printf("#### -> Packet Completed.\n");
 
     /* envio del paquete.
      * */
@@ -242,7 +246,13 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
       mine_interface->name
     );
 
-    printf("Packet Sent.\n");
+    printf("#### -> Packet Sent.\n");
+    
+    printf("### -> Packet Info:\n");
+    print_hdr_eth(packet);
+    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+    printf("--------------------------------------\n");
 
     free(entrada_cache);
 
@@ -258,6 +268,10 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
       packet_size, 
       mine_interface->name
     );
+
+    print_hdr_eth(packet);
+    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
     handle_arpreq (sr, req);
   }
