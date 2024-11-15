@@ -126,14 +126,6 @@ void sr_send_icmp_error_packet (
 
     memcpy (packet_ether->ether_shost, mine_interface->addr, ETHER_ADDR_LEN);
     memcpy (packet_ether->ether_dhost, (uint8_t *)entrada_cache->mac, ETHER_ADDR_LEN);
-    
-    printf("--------------------------------------\n");
-    printf("### -> Packet Info:\n");
-    print_hdr_eth(packet);
-    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-
-    printf("#### -> Packet Completed.\n");
 
     /* envio del paquete.
      * */
@@ -174,6 +166,8 @@ void sr_send_icmp_error_packet (
 
     handle_arpreq (sr, req);
   }
+
+  free(packet);
 } /* -- sr_send_icmp_error_packet -- */
 
 void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *sr, uint32_t ipDst, uint8_t *ipPacket) {
@@ -223,14 +217,6 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
     memcpy (packet_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
     memcpy (packet_ether->ether_shost, (uint8_t *)mine_interface->addr, ETHER_ADDR_LEN);
 
-    printf("--------------------------------------\n");
-    printf("### -> Packet Info:\n");
-    print_hdr_eth(packet);
-    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-
-    printf("#### -> Packet Completed.\n");
-
     /* envio del paquete.
      * */
     sr_send_packet (
@@ -269,6 +255,8 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
 
     handle_arpreq (sr, req);
   }
+
+  free(packet);
 }
 
 void sr_handle_ip_packet(struct sr_instance *sr,
