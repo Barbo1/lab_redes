@@ -355,10 +355,12 @@ void* send_hello_packet(void* arg) {
   printf("$$$$ -> Packet Sent.\n");
   printf("--------------------------------------\n");
 
-  Debug("-> PWOSPF: Sending HELLO Packet of length = %d, out of the interface: %s\n", packet_len, hello_param->interface->name);
+  /*
+  Debug("-> PWOSPF: Sending HELLO Packet of length = %d, out of the interface: %s\n", len, hello_param->interface->name);
   Debug("      [Router ID = %s]\n", inet_ntoa(g_router_id));
   Debug("      [Router IP = %s]\n", inet_ntoa(ip));
   Debug("      [Network Mask = %s]\n", inet_ntoa(mask));
+  */
 
   return NULL;
 } /* -- send_hello_packet -- */
@@ -401,7 +403,7 @@ void* send_all_lsu(void* arg) {
 unsigned construir_packete_lsu (uint8_t * packet, struct sr_instance* sr, struct sr_if* interface, uint8_t ttl) {
   pwospf_lock(sr->ospf_subsys);
   unsigned lsas = 0;
-  sr_rt * elem = sr->routing_table;
+  struct sr_rt * elem = sr->routing_table;
   while (elem) {
     lsas++;
     elem = elem->next;
@@ -545,11 +547,13 @@ void* send_lsu(void* arg)
   printf("$$$$ -> Packet Sent.\n");
   printf("--------------------------------------\n");
 
+  /*
   Debug("-> PWOSPF: Sending HELLO Packet of length = %d, out of the interface: %s\n", packet_len, hello_param->interface->name);
   Debug("      [Router ID = %s]\n", inet_ntoa(g_router_id));
   Debug("      [Router IP = %s]\n", inet_ntoa(ip));
   Debug("      [Network Mask = %s]\n", inet_ntoa(mask));
-
+  */
+  
   return NULL;
 } /* -- send_lsu -- */
 
@@ -572,7 +576,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     return;
   }
 
-  sr_if * elem = sr->if_list;
+  struct sr_if * elem = sr->if_list;
   while (!elem && elem->neighbor_id != ip_hdr->ip_id) {
     elem = elem->next;
   }
@@ -592,7 +596,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     elem->neighbor_id = ospf_hdr->rid;
     elem->neighbor_ip = ip_hdr->ip_id;
 
-    struct ospfv2_neighbor * new_neighbor = (ospfv2_neighbor *)malloc(sizeof(ospfv2_neighbor));
+    struct ospfv2_neighbor * new_neighbor = (struct ospfv2_neighbor *)malloc(sizeof(struct ospfv2_neighbor));
     new_neighbor->neighbor_id.s_addr = ospf_hdr->rid;
     new_neighbor->alive = 0;
     add_neighbor(g_neighbors, new_neighbor);
@@ -699,7 +703,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   params.mutex = g_dijkstra_mutex;
   pthread_create(&g_rx_lsu_thread, NULL, run_dijkstra, &params);
 
-  sr_if * elem = rx_lsu_param->sr->if_list;
+  struct sr_if * elem = rx_lsu_param->sr->if_list;
   while (!elem) {
     if (elem->neighbor_id != ip_hdr->ip_id) {
       powspf_hello_lsu_param_t params_send;
