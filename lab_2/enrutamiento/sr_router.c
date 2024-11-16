@@ -20,6 +20,10 @@
 #include "sr_protocol.h"
 #include "sr_arpcache.h"
 #include "sr_utils.h"
+#include "pwospf_protocol.h"
+#include "sr_pwospf.h"
+
+uint8_t sr_multicast_mac[ETHER_ADDR_LEN];
 
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
@@ -32,6 +36,17 @@
 void sr_init(struct sr_instance* sr)
 {
     assert(sr);
+
+    /* Inicializa el subsistema OSPF */
+    pwospf_init(sr);
+
+    /* Dirección MAC de multicast OSPF */
+    sr_multicast_mac[0] = 0x01;
+    sr_multicast_mac[1] = 0x00;
+    sr_multicast_mac[2] = 0x5e;
+    sr_multicast_mac[3] = 0x00;
+    sr_multicast_mac[4] = 0x00;
+    sr_multicast_mac[5] = 0x05;
 
     /* Inicializa la caché y el hilo de limpieza de la caché */
     sr_arpcache_init(&(sr->cache));
@@ -291,20 +306,6 @@ void sr_handle_ip_packet(struct sr_instance *sr,
     return;
   }
 
-  /* el paquete que llego es ospf. */
-  if (ip_headers->ip_p == ip_protocol_ospfv2) {
-    printf("###### -> Its a ospf packet.\n");
-
-    sr_handle_pwospf_packet(
-      sr, 
-      packet, 
-      len, 
-      struct sr_if* rx_if /* que es esto? */
-    );
-
-    return;
-  }
-
   struct sr_if * mine_interface = sr_get_interface_given_ip(sr, ip_to_packet);
 
   /* El paquete es para una de mis interfaces. */
@@ -330,6 +331,18 @@ void sr_handle_ip_packet(struct sr_instance *sr,
         printf("###### -> Its NOT an echo reply.\n");
       }
 
+    /* el paquete que llego es ospf. */
+    } else if (ip_headers->ip_p == ip_protocol_ospfv2) {
+      printf("###### -> Its a ospf packet.\n");
+
+      sr_handle_pwospf_packet(
+        sr, 
+        packet, 
+        len, 
+        mine_interface
+      );
+
+      return;
     } else {
       printf("##### -> Its NOT a recognized packet.\n");
     }
@@ -417,7 +430,11 @@ void sr_handle_ip_packet(struct sr_instance *sr,
 */
 
 /* Envía todos los paquetes IP pendientes de una solicitud ARP */
-void sr_arp_reply_send_pending_packets(struct sr_instance *sr, struct sr_arpreq *arpReq, uint8_t *dhost, uint8_t *shost, struct sr_if *iface) {
+void sr_arp_reply_send_pending_packets(struct sr_instance *sr,
+                                        struct sr_arpreq *arpReq,
+                                        uint8_t *dhost,
+                                        uint8_t *shost,
+                                        struct sr_if *iface) {
 
   struct sr_packet *currPacket = arpReq->packets;
   sr_ethernet_hdr_t *ethHdr;
