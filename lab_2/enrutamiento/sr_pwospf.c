@@ -301,19 +301,19 @@ void* send_hello_packet(void* arg) {
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
   memcpy(ether_hdr->ether_shost, hello_param->interface->addr, ETHER_ADDR_LEN);
   memset(ether_hdr->ether_dhost, 0xFF, ETHER_ADDR_LEN);
-  ether_hdr->ether_type = ethertype_ip;
+  ether_hdr->ether_type = htons(ethertype_ip);
 
   /* Inicializo cabezal IP */
   sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   ip_hdr->ip_v = 4;
   ip_hdr->ip_hl = 5;
   ip_hdr->ip_tos = 0;
-  ip_hdr->ip_len = sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t);
-  ip_hdr->ip_p = htons(ip_protocol_ospfv2);
+  ip_hdr->ip_len = htons(sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t));
+  ip_hdr->ip_p = ip_protocol_ospfv2;
   ip_hdr->ip_id = 0;
-  ip_hdr->ip_dst = OSPF_AllSPFRouters;
+  ip_hdr->ip_dst = htonl(OSPF_AllSPFRouters);
   ip_hdr->ip_src = hello_param->interface->ip;
-  ip_hdr->ip_off = IP_DF;
+  ip_hdr->ip_off = htons(IP_DF);
   ip_hdr->ip_ttl = 64;
   ip_hdr->ip_sum = 0;
   ip_hdr->ip_sum = ip_cksum(ip_hdr, sizeof(sr_ip_hdr_t));
@@ -424,7 +424,7 @@ unsigned construir_packete_lsu (uint8_t * packet, struct sr_instance* sr, struct
   ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
   ip_hdr->ip_p = htons(ip_protocol_ospfv2);
   ip_hdr->ip_id = 0;
-  ip_hdr->ip_dst = OSPF_AllSPFRouters;
+  ip_hdr->ip_dst = htonl(OSPF_AllSPFRouters);
   ip_hdr->ip_src = interface->ip;
   ip_hdr->ip_off = IP_DF;
   ip_hdr->ip_ttl = ttl;
