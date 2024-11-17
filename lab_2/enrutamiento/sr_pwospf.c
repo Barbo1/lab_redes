@@ -662,12 +662,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   Debug("-> Entering lsu handling.\n");
   powspf_rx_lsu_param_t* rx_lsu_param = ((powspf_rx_lsu_param_t*)(arg));
 
-  /* Obtengo el vecino que me envió el LSU*/
-  /* Imprimo info del paquete recibido*/
-  /*
-    Debug("-> PWOSPF: Detecting LSU Packet from [Neighbor ID = %s, IP = %s]\n", inet_ntoa(next_hop_id), inet_ntoa(next_hop_ip));
-  */
-
   /* Inicializo cabezal IP */
   sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(rx_lsu_param->packet + sizeof(sr_ethernet_hdr_t));
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(ip_hdr + sizeof(sr_ip_hdr_t));
@@ -675,18 +669,23 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   ospfv2_lsa_t * lsa_hdr = (ospfv2_lsa_t *)(lsu_hdr + sizeof(ospfv2_lsu_hdr_t));
 
   unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsu_hdr->num_adv * sizeof(ospfv2_lsa_t);
+  Debug("-> checksum del paquete: %d\n", ospf_hdr->csum);
+  Debug("-> checksum calculado: %d\n", ospfv2_cksum(ospf_hdr, size));
   if (ospf_hdr->csum != ospfv2_cksum(ospf_hdr, size)) {
     Debug("-> PWOSPF: LSU Packet dropped, invalid checksum\n");
+    return NULL;
   }
 
   if (ospf_hdr->rid == g_router_id.s_addr) {
     Debug("-> PWOSPF: LSU Packet dropped, originated by this router\n");
+    return NULL;
   }
   
   struct in_addr rid;
   rid.s_addr = ospf_hdr->rid;
   if (check_sequence_number(g_topology, rid, lsu_hdr->seq)) {
     Debug("-> PWOSPF: LSU Packet dropped, repeated sequence number\n");
+    return NULL;
   }
 
   int i = 0;
