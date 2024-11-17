@@ -601,20 +601,19 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   struct sr_if * elem = sr->if_list;
   while (elem) {
     if (elem->ip != rx_if->ip) {
-      Debug("-> -> sendin a lsu packet to a interface %s .\n", elem->name);
-      powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
-      params->sr = sr;
-      params->interface = elem;
-      
       uint32_t ipDst = elem->neighbor_ip;
 
+      Debug("->-->>--->>> 1\n");
       /* Construcción del paquete. */
       uint8_t * packet;
+      Debug("->-->>--->>> 2\n");
       unsigned len = construir_packete_lsu (&packet, sr, elem, 64);
+      Debug("->-->>--->>> 3\n");
       sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
 
-      ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-      ospf_hdr->rid = ospf_hdr->rid;
+      Debug("->-->>--->>> 4\n");
+      ospfv2_hdr_t * ospf_hdr_new = (ospfv2_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+      ospf_hdr_new->rid = ospf_hdr->rid;
 
       Debug("\n\nPWOSPF: LSU packet constructed\n");
 
