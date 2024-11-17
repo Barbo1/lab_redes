@@ -424,9 +424,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   pwospf_unlock(sr->ospf_subsys);
 
   unsigned ospf_size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
-  Debug("->-->>--->> 1\n");
   unsigned len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + ospf_size;
-  Debug("->-->>--->> 2\n");
   *packet = (uint8_t *)malloc(len);
   Debug("->-->>--->> 3\n");
 
@@ -448,6 +446,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   ip_hdr->ip_sum = 0;
   ip_hdr->ip_sum = ip_cksum(ip_hdr, sizeof(sr_ip_hdr_t));
 
+  Debug("->-->>--->> 1\n");
   /* Inicializo cabezal de PWOSPF con version 2 y tipo HELLO */
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
   ospf_hdr->version = OSPF_V2;
@@ -465,6 +464,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   lsu_hdr->num_adv = lsas;
 
   ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
+  Debug("->-->>--->> 2\n");
 
   pwospf_lock(sr->ospf_subsys);
   elem = sr->routing_table;
@@ -479,6 +479,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   pwospf_unlock(sr->ospf_subsys);
 
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, ospf_size);
+  Debug("->-->>--->> 4\n");
 
   return len;
 }
