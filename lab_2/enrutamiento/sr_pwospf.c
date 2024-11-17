@@ -670,15 +670,17 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   powspf_rx_lsu_param_t* rx_lsu_param = ((powspf_rx_lsu_param_t*)(arg));
 
   /* Inicializo cabezal IP */
-  sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(rx_lsu_param->packet + sizeof(sr_ethernet_hdr_t));
-  ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(ip_hdr + sizeof(sr_ip_hdr_t));
-  ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(ospf_hdr + sizeof(ospfv2_hdr_t));
-  ospfv2_lsa_t * lsa_hdr = (ospfv2_lsa_t *)(lsu_hdr + sizeof(ospfv2_lsu_hdr_t));
+  unsigned size = sizeof(sr_ethernet_hdr_t);
+  sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(rx_lsu_param->packet + size);
+  size += sizeof(sr_ip_hdr_t);
+  ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(rx_lsu_param->packet + size);
+  size += sizeof(ospfv2_hdr_t);
+  ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(rx_lsu_param->packet + size);
+  size += sizeof(ospfv2_lsu_hdr_t);
+  ospfv2_lsa_t * lsa_hdr = (ospfv2_lsa_t *)(rx_lsu_param->packet + size);
   
-  unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsu_hdr->num_adv * sizeof(ospfv2_lsa_t);
   Debug("\n---------------%d--------------n", size);
   Debug("\n---------------%d--------------n", rx_lsu_param->length);
-
   Debug("\n-------------------------------n");
   Debug("\n--------LARGO OBTENCION--------n");
   Debug("\n---------------%d--------------n", size);
