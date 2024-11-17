@@ -618,43 +618,43 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
       g_neighbors, 
       create_ospfv2_neighbor(res)
     );
-
     refresh_neighbors_alive(g_neighbors, res);
 
-    struct in_addr rid, net, mask, nid, nip;
-    rid.s_addr = ospf_hdr->rid;
-    net.s_addr = ip_hdr->ip_src & hello_hdr->nmask;
-    mask.s_addr = hello_hdr->nmask;
-    nid.s_addr = rx_if->neighbor_id;
-    nip.s_addr = rx_if->neighbor_ip;
+  }
 
-    refresh_topology_entry(
-      g_topology, 
-      rid, 
-      net, 
-      mask,
-      nid, 
-      nip, 
-      g_sequence_num
-    );
-    sr_print_routing_table(sr);
+  struct in_addr rid, net, mask, nid, nip;
+  rid.s_addr = ospf_hdr->rid;
+  net.s_addr = ip_hdr->ip_src & hello_hdr->nmask;
+  mask.s_addr = hello_hdr->nmask;
+  nid.s_addr = rx_if->neighbor_id;
+  nip.s_addr = rx_if->neighbor_ip;
 
-    struct sr_if * elem = sr->if_list;
-    while (elem) {
-      if (elem->ip != rx_if->ip && elem->neighbor_ip != 0) {
-        powspf_hello_lsu_param_t * lsu_param = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
-        lsu_param->interface = elem;
-        lsu_param->sr = sr;
+  refresh_topology_entry(
+    g_topology, 
+    rid, 
+    net, 
+    mask,
+    nid, 
+    nip, 
+    g_sequence_num
+  );
+  sr_print_routing_table(sr);
 
-        if (pthread_create(&g_all_lsu_thread, NULL, send_lsu, lsu_param)) { 
-          perror("pthread_create");
-          assert(0);
-        } else {
-          pthread_detach(g_all_lsu_thread);
-        }
+  struct sr_if * elem = sr->if_list;
+  while (elem) {
+    if (elem->ip != rx_if->ip && elem->neighbor_ip != 0) {
+      powspf_hello_lsu_param_t * lsu_param = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
+      lsu_param->interface = elem;
+      lsu_param->sr = sr;
+
+      if (pthread_create(&g_all_lsu_thread, NULL, send_lsu, lsu_param)) { 
+        perror("pthread_create");
+        assert(0);
+      } else {
+        pthread_detach(g_all_lsu_thread);
       }
-      elem = elem->next;
     }
+    elem = elem->next;
   }
   Debug("-> Has finished.\n");
 } /* -- sr_handle_pwospf_hello_packet -- */
