@@ -266,7 +266,7 @@ void* send_hellos(void* arg)
         powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
         params->interface = inter;
         params->sr = sr;
-        if (pthread_create(&g_dijkstra_thread, NULL, send_hello_packet, &params)) { 
+        if (pthread_create(&g_dijkstra_thread, NULL, send_hello_packet, params)) { 
           perror("pthread_create");
           assert(0);
         } else {
@@ -359,15 +359,10 @@ void* send_hello_packet(void* arg) {
     hello_param->interface->name
   );
 
+  free(packet);
+
   printf("$$$$ -> Packet Sent.\n");
   printf("--------------------------------------\n");
-
-  /*
-  Debug("-> PWOSPF: Sending HELLO Packet of length = %d, out of the interface: %s\n", len, hello_param->interface->name);
-  Debug("      [Router ID = %s]\n", inet_ntoa(g_router_id));
-  Debug("      [Router IP = %s]\n", inet_ntoa(ip));
-  Debug("      [Network Mask = %s]\n", inet_ntoa(mask));
-  */
 
   return NULL;
 } /* -- send_hello_packet -- */
@@ -397,7 +392,7 @@ void* send_all_lsu(void* arg) {
         lsu_param->interface = inter;
         lsu_param->sr = sr;
 
-        if (pthread_create(&g_neighbors_thread, NULL, check_neighbors_life, &lsu_param)) { 
+        if (pthread_create(&g_neighbors_thread, NULL, check_neighbors_life, lsu_param)) { 
           perror("pthread_create");
           assert(0);
         } else {
@@ -557,7 +552,6 @@ void* send_lsu(void* arg)
     handle_arpreq (lsu_param->sr, req);
   }
 
-  free(lsu_param);
   free(packet);
 
   printf("$$$$ -> Packet Sent.\n");
@@ -632,10 +626,16 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
       Debug("\n\n%%%%%%%%%%- %d: \n", elem->neighbor_id);
       if (elem->neighbor_id != 0 || elem->ip != rx_if->ip) {
         Debug("-> -> sendin a lsu packet to a interface %d .\n", elem->name);
-        powspf_hello_lsu_param_t params;
-        params.sr = sr;
-        params.interface = elem;
-        send_lsu((void *)&params);
+        powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
+        params->sr = sr;
+        params->interface = elem;
+        
+        if (pthread_create(&g_neighbors_thread, NULL, send_lsu, params)) { 
+          perror("pthread_create");
+          assert(0);
+        } else {
+          pthread_detach(g_neighbors_thread);
+        }
       }
       elem = elem->next;
     }
