@@ -263,11 +263,15 @@ void* send_hellos(void* arg)
       Debug("\n\n%%%%%%%%%%- Iterating over %s interface: \n", inter->name);
 
       if ((inter->helloint)++ < OSPF_NEIGHBOR_TIMEOUT) {
-        powspf_hello_lsu_param_t params;
-        params.interface = inter;
-        params.sr = sr;
-        pthread_create(&g_dijkstra_thread, NULL, send_hello_packet, &params);
-
+        powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
+        params->interface = inter;
+        params->sr = sr;
+        if (pthread_create(&g_dijkstra_thread, NULL, send_hello_packet, &params)) { 
+          perror("pthread_create");
+          assert(0);
+        } else {
+          pthread_detach(g_dijkstra_thread);
+        }
         inter->helloint = 0;
       }
       inter = inter->next;
@@ -389,10 +393,16 @@ void* send_all_lsu(void* arg) {
     struct sr_if * inter = sr->if_list;
     while (inter) {
       if (inter->neighbor_id != 0) {
-        powspf_hello_lsu_param_t lsu_param;
-        lsu_param.interface = inter;
-        lsu_param.sr = sr;
-        pthread_create(&g_neighbors_thread, NULL, check_neighbors_life, &lsu_param);
+        powspf_hello_lsu_param_t * lsu_param = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
+        lsu_param->interface = inter;
+        lsu_param->sr = sr;
+
+        if (pthread_create(&g_neighbors_thread, NULL, check_neighbors_life, &lsu_param)) { 
+          perror("pthread_create");
+          assert(0);
+        } else {
+          pthread_detach(g_neighbors_thread);
+        }
       }
     }
 
@@ -716,7 +726,13 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   params.rid.s_addr = ospf_hdr->rid;
   params.topology = g_topology;
   params.mutex = g_dijkstra_mutex;
-  pthread_create(&g_rx_lsu_thread, NULL, run_dijkstra, &params);
+
+  if (pthread_create(&g_rx_lsu_thread, NULL, run_dijkstra, &params)) { 
+    perror("pthread_create");
+    assert(0);
+  } else {
+    pthread_detach(g_rx_lsu_thread);
+  }
 
   struct sr_if * elem = rx_lsu_param->sr->if_list;
   while (elem) {
