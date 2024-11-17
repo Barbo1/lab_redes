@@ -427,7 +427,7 @@ unsigned construir_packete_lsu (uint8_t * packet, struct sr_instance* sr, struct
   pwospf_unlock(sr->ospf_subsys);
 
   unsigned len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
-  packet = (uint8_t *)malloc(len * sizeof(uint8_t));
+  packet = (uint8_t *)malloc(len);
 
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
   ether_hdr->ether_type = htons(ethertype_ip);
@@ -476,11 +476,10 @@ unsigned construir_packete_lsu (uint8_t * packet, struct sr_instance* sr, struct
     elem = elem->next;
     lsa_part += sizeof(ospfv2_lsa_t);
   }
+  pwospf_unlock(sr->ospf_subsys);
 
   unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
-
-  pwospf_unlock(sr->ospf_subsys);
 
   return len;
 }
@@ -547,6 +546,11 @@ void* send_lsu(void* arg)
   } else {
     printf("#### -> MAC not found\n");
 
+    printf("### -> Packet Info:\n");
+    print_hdr_eth(packet);
+    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+
     struct sr_arpreq * req = sr_arpcache_queuereq (
       &(lsu_param->sr->cache), 
       lsu_param->interface->neighbor_ip,
@@ -554,15 +558,10 @@ void* send_lsu(void* arg)
       len, 
       lsu_param->interface->name
     );
-
-    printf("### -> Packet Info:\n");
-    print_hdr_eth(packet);
-    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-
     handle_arpreq (lsu_param->sr, req);
   }
 
+  printf("### -> Prueba para coso\n");
   free(packet);
 
   printf("$$$$ -> Packet Sent.\n");
