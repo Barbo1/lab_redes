@@ -614,12 +614,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     struct in_addr res;
     res.s_addr = ospf_hdr->rid;
 
-    add_neighbor(
-      g_neighbors, 
-      create_ospfv2_neighbor(res)
-    );
     refresh_neighbors_alive(g_neighbors, res);
-
   }
 
   struct in_addr rid, net, mask, nid, nip;
