@@ -607,64 +607,16 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     Debug("interfaz entrada: %s\n", rx_if->name);
     Debug("ip del vecion: %d\n\n", elem->neighbor_ip);
     if (elem->ip != rx_if->ip && elem->neighbor_ip != 0) {
-      uint32_t ipDst = elem->neighbor_ip;
+      powspf_hello_lsu_param_t * lsu_param = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
+      lsu_param->interface = elem;
+      lsu_param->sr = sr;
 
-      /* Construcción del paquete. */
-      uint8_t * packet_new;
-      unsigned len_new = construir_packete_lsu (&packet_new, sr, elem, 64);
-      sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet_new;
-
-      ospfv2_hdr_t * ospf_hdr_new = (ospfv2_hdr_t *)(packet_new + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-      ospf_hdr_new->rid = ospf_hdr->rid;
-      ospf_hdr_new->csum = ospfv2_cksum(ospf_hdr_new, size);
-
-      printf("$$$ -> Packet Info:\n");
-      print_hdr_eth(packet);
-      print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-      print_hdr_ospf(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-
-      Debug("\n\nPWOSPF: LSU packet constructed\n");
-
-      /* envio del paquete.
-       * */
-      struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), ipDst);
-
-      /* Se conoce la MAC. 
-       * */
-      if (entrada_cache) {
-        printf("#### -> Found MAC in the cache\n");
-
-        memcpy(ether_hdr->ether_shost, elem->addr, ETHER_ADDR_LEN);
-        memcpy(ether_hdr->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
-
-        /* envio del paquete.
-         * */
-        sr_send_packet (
-            sr, 
-            packet_new, 
-            len_new, 
-            elem->name
-            );
-
-        free(entrada_cache);
-
-        /* NO se conoce la MAC. 
-         * */
+      if (pthread_create(&g_all_lsu_thread, NULL, send_lsu, lsu_param)) { 
+        perror("pthread_create");
+        assert(0);
       } else {
-        printf("#### -> MAC not found\n");
-
-        struct sr_arpreq * req = sr_arpcache_queuereq (
-          &(sr->cache), 
-          ipDst,
-          packet_new, 
-          len_new, 
-          elem->name
-        );
-        handle_arpreq (sr, req);
+        pthread_detach(g_all_lsu_thread);
       }
-
-      free(packet_new);
-      printf("#### -> Packet Sent.\n");
     }
     elem = elem->next;
   }
