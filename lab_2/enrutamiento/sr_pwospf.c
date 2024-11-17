@@ -205,14 +205,16 @@ void* check_neighbors_life(void* arg)
     struct sr_instance* sr = (struct sr_instance*)arg;
     struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors);
 
-    if (vecinos_muertos) {
-      while (vecinos_muertos) {
-        struct sr_if * inter = sr->if_list;
-        while (inter->neighbor_id != vecinos_muertos->neighbor_id.s_addr);
-        inter->neighbor_id = 0;
-        inter->helloint = 0;
-        inter->neighbor_ip = 0;
-        vecinos_muertos = vecinos_muertos->next;
+    while(1) {
+      if (vecinos_muertos) {
+        while (vecinos_muertos) {
+          struct sr_if * inter = sr->if_list;
+          while (inter->neighbor_id != vecinos_muertos->neighbor_id.s_addr);
+          inter->neighbor_id = 0;
+          inter->helloint = 0;
+          inter->neighbor_ip = 0;
+          vecinos_muertos = vecinos_muertos->next;
+        }
       }
     }
 
@@ -232,26 +234,28 @@ void* check_topology_entries_age(void* arg)
 {
   struct sr_instance* sr = (struct sr_instance*)arg;
 
-  if (check_topology_age(g_topology)) {
-    dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
-    params->sr = sr;
-    params->rid = g_router_id;
-    params->topology = g_topology;
-    params->mutex = g_dijkstra_mutex;
+  while(1) {
+    if (check_topology_age(g_topology)) {
+      dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
+      params->sr = sr;
+      params->rid = g_router_id;
+      params->topology = g_topology;
+      params->mutex = g_dijkstra_mutex;
 
-    pwospf_lock(sr->ospf_subsys);
+      pwospf_lock(sr->ospf_subsys);
 
-    if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) { 
-      perror("pthread_create");
-      assert(0);
-    } else {
-      pthread_detach(g_dijkstra_thread);
+      if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) { 
+        perror("pthread_create");
+        assert(0);
+      } else {
+        pthread_detach(g_dijkstra_thread);
+      }
+      
+      pwospf_lock(sr->ospf_subsys);
     }
-    
-    pwospf_lock(sr->ospf_subsys);
+    sr_print_routing_table(sr);
+    print_topolgy_table(g_topology);
   }
-  sr_print_routing_table(sr);
-  print_topolgy_table(g_topology);
 
   return NULL;
 } /* -- check_topology_entries_age -- */
