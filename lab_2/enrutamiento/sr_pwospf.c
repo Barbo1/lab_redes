@@ -602,17 +602,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     return;
   }
 
-  struct sr_if * elem = sr->if_list;
-  while (elem && elem->neighbor_id != ip_hdr->ip_id) {
-    elem = elem->next;
-  }
-
-  if (!elem) {
-    Debug("-> PWOSPF: HELLO Packet dropped, an error has ocurred\n");
-    return;
-  }
-
-  if (hello_hdr->nmask != elem->mask) {
+  if (hello_hdr->nmask != rx_if->mask) {
     Debug("-> PWOSPF: HELLO Packet dropped, invalid hello network mask\n");
     return;
   }
@@ -623,25 +613,23 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     return;
   }
   
-  elem->neighbor_id = ospf_hdr->rid;
-  elem->neighbor_ip = ip_hdr->ip_src;
+  rx_if->neighbor_id = ospf_hdr->rid;
+  rx_if->neighbor_ip = ip_hdr->ip_src;
 
   struct ospfv2_neighbor * new_neighbor = (struct ospfv2_neighbor *)malloc(sizeof(struct ospfv2_neighbor));
   new_neighbor->neighbor_id.s_addr = ospf_hdr->rid;
   new_neighbor->alive = 0;
   add_neighbor(g_neighbors, new_neighbor);
 
-  struct in_addr subnet;
-  subnet.s_addr = ip_hdr->ip_id;
+  struct in_addr neigbor_id;
+  neigbor_id.s_addr = ospf_hdr->rid;
 
-  refresh_neighbors_alive(g_neighbors, subnet);
+  refresh_neighbors_alive(g_neighbors, neigbor_id);
 
   sr_print_routing_table(sr);
 
-  elem = sr->if_list;
+  struct sr_if * elem = sr->if_list;
   while (elem) {
-    Debug("\n\n%%%%%%%%%%- %d, %d \n", elem->ip, rx_if->ip);
-    Debug("\n\n%%%%%%%%%%- %d \n", elem->neighbor_id);
     if (elem->ip != rx_if->ip) {
       Debug("-> -> sendin a lsu packet to a interface %s .\n", elem->name);
       powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
