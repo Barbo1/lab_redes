@@ -456,7 +456,6 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   ospf_hdr->aid = 0;
   ospf_hdr->autype = 0;
   ospf_hdr->audata = 0;
-  ospf_hdr->csum = 0;
 
   ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
   lsu_hdr->unused = 0;
@@ -465,8 +464,8 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   lsu_hdr->num_adv = lsas;
 
   ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
+
   pwospf_lock(sr->ospf_subsys);
-  
   elem = sr->routing_table;
   while (elem) {
     lsa_part->subnet = elem->dest.s_addr;
@@ -478,15 +477,13 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   }
   pwospf_unlock(sr->ospf_subsys);
 
-  unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
-  uint32_t a = ospfv2_cksum(ospf_hdr, size);
-  Debug("\n--------------------------------------n");
-  Debug("\n--------------------------------------n");
-  Debug("\n-----------------%d--------------------n", a);
-  Debug("\n--------------------------------------n");
-  Debug("\n--------------------------------------n");
-  ospf_hdr->csum = a;
-
+  unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsu_hdr->num_adv * sizeof(ospfv2_lsa_t);
+  Debug("\n-------------------------------n");
+  Debug("\n-------LARGO EN CREACION-------n");
+  Debug("\n---------------%d--------------n", size);
+  Debug("\n-------------------------------n");
+  Debug("\n-------------------------------n");
+  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
 
   return len;
 }
@@ -676,6 +673,11 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   ospfv2_lsa_t * lsa_hdr = (ospfv2_lsa_t *)(lsu_hdr + sizeof(ospfv2_lsu_hdr_t));
 
   unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsu_hdr->num_adv * sizeof(ospfv2_lsa_t);
+  Debug("\n-------------------------------n");
+  Debug("\n--------LARGO OBTENCION--------n");
+  Debug("\n---------------%d--------------n", size);
+  Debug("\n-------------------------------n");
+  Debug("\n-------------------------------n");
   Debug("-> checksum del paquete: %d\n", ospf_hdr->csum);
   Debug("-> checksum calculado: %d\n", ospfv2_cksum(ospf_hdr, size));
   if (ospf_hdr->csum != ospfv2_cksum(ospf_hdr, size)) {
