@@ -231,6 +231,13 @@ void* check_topology_entries_age(void* arg)
   struct sr_instance* sr = (struct sr_instance*)arg;
 
   if (check_topology_age(g_topology)) {
+
+    if (pthread_create(&g_rx_lsu_thread, NULL, run_dijkstra, &params)) { 
+      perror("pthread_create");
+      assert(0);
+    } else {
+      pthread_detach(g_rx_lsu_thread);
+    }
     pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, g_topology);
   }
 
@@ -486,6 +493,7 @@ unsigned construir_packete_lsu (uint8_t * packet, struct sr_instance* sr, struct
 
 void* send_lsu(void* arg)
 {
+  Debug("\n\nPWOSPF: Constructing HELLO packet for interface %s: \n", hello_param->interface->name);
   powspf_hello_lsu_param_t* lsu_param = ((powspf_hello_lsu_param_t*)(arg));
 
   /* Solo envío LSUs si del otro lado hay un router*/
@@ -620,28 +628,25 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   struct in_addr subnet;
   subnet.s_addr = ip_hdr->ip_id;
 
-  Debug("3\n");
   refresh_neighbors_alive(g_neighbors, subnet);
 
-  Debug("4\n");
   sr_print_routing_table(sr);
 
-  Debug("5\n");
   elem = sr->if_list;
   while (elem) {
     Debug("\n\n%%%%%%%%%%- %d, %d: \n", elem->ip, rx_if->ip);
     Debug("\n\n%%%%%%%%%%- %d: \n", elem->neighbor_id);
     if (elem->neighbor_id != 0 && elem->ip != rx_if->ip) {
-      Debug("-> -> sendin a lsu packet to a interface %d .\n", elem->name);
       powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
       params->sr = sr;
       params->interface = elem;
       
-      if (pthread_create(&g_neighbors_thread, NULL, send_lsu, params)) { 
+      Debug("-> -> sending a lsu packet to a interface %d .\n", elem->name);
+      if (pthread_create(&g_lsu_thread, NULL, send_lsu, params)) { 
         perror("pthread_create");
         assert(0);
       } else {
-        pthread_detach(g_neighbors_thread);
+        pthread_detach(g_lsu_thread);
       }
     }
     elem = elem->next;
@@ -660,6 +665,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
 
 void* sr_handle_pwospf_lsu_packet(void* arg)
 {
+  Debug("-> Entering lsu handling.\n");
   powspf_rx_lsu_param_t* rx_lsu_param = ((powspf_rx_lsu_param_t*)(arg));
 
   /* Obtengo el vecino que me envió el LSU*/
