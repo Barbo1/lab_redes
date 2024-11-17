@@ -426,7 +426,10 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   }
   pwospf_unlock(sr->ospf_subsys);
 
-  unsigned len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
+  unsigned ospf_size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
+  unsigned len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + ospf_size;
+  Debug("\n---------------%d--------------n", ospf_size);
+  Debug("\n---------------%d--------------n", len);
   *packet = (uint8_t *)malloc(len);
 
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)*packet;
@@ -451,7 +454,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
   ospf_hdr->version = OSPF_V2;
   ospf_hdr->type = OSPF_TYPE_LSU;
-  ospf_hdr->len = htons(sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t));
+  ospf_hdr->len = htons(ospf_size);
   ospf_hdr->rid = g_router_id.s_addr;
   ospf_hdr->aid = 0;
   ospf_hdr->autype = 0;
@@ -477,14 +480,13 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   }
   pwospf_unlock(sr->ospf_subsys);
 
-  unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsu_hdr->num_adv * sizeof(ospfv2_lsa_t);
   Debug("\n-------------------------------n");
   Debug("\n-------LARGO EN CREACION-------n");
-  Debug("\n---------------%d--------------n", size);
+  Debug("\n---------------%d--------------n", ospf_size);
   Debug("\n---------------%d--------------n", lsu_hdr->num_adv);
   Debug("\n-------------------------------n");
   Debug("\n-------------------------------n");
-  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
+  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, ospf_size);
 
   return len;
 }
@@ -667,15 +669,16 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   Debug("-> Entering lsu handling.\n");
   powspf_rx_lsu_param_t* rx_lsu_param = ((powspf_rx_lsu_param_t*)(arg));
 
-
-
   /* Inicializo cabezal IP */
   sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(rx_lsu_param->packet + sizeof(sr_ethernet_hdr_t));
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(ip_hdr + sizeof(sr_ip_hdr_t));
   ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(ospf_hdr + sizeof(ospfv2_hdr_t));
   ospfv2_lsa_t * lsa_hdr = (ospfv2_lsa_t *)(lsu_hdr + sizeof(ospfv2_lsu_hdr_t));
-
+  
   unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsu_hdr->num_adv * sizeof(ospfv2_lsa_t);
+  Debug("\n---------------%d--------------n", size);
+  Debug("\n---------------%d--------------n", rx_lsu_param->length);
+
   Debug("\n-------------------------------n");
   Debug("\n--------LARGO OBTENCION--------n");
   Debug("\n---------------%d--------------n", size);
