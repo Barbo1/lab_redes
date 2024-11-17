@@ -614,8 +614,12 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
 
     refresh_neighbors_alive(g_neighbors, subnet);
 
+    sr_print_routing_table(sr);
+
     elem = sr->if_list;
     while (!elem) {
+      Debug("\n\n%%%%%%%%%%- %d, %d: \n", elem->ip, rx_if->ip);
+      Debug("\n\n%%%%%%%%%%- %d: \n", elem->neighbor_id);
       if (elem->neighbor_id != 0 || elem->ip != rx_if->ip) {
         Debug("-> -> sendin a lsu packet to a interface %d .\n", elem->name);
         powspf_hello_lsu_param_t params;
