@@ -481,6 +481,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   Debug("\n-------------------------------n");
   Debug("\n-------LARGO EN CREACION-------n");
   Debug("\n---------------%d--------------n", size);
+  Debug("\n---------------%d--------------n", lsu_hdr->num_adv);
   Debug("\n-------------------------------n");
   Debug("\n-------------------------------n");
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
@@ -666,6 +667,8 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   Debug("-> Entering lsu handling.\n");
   powspf_rx_lsu_param_t* rx_lsu_param = ((powspf_rx_lsu_param_t*)(arg));
 
+
+
   /* Inicializo cabezal IP */
   sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(rx_lsu_param->packet + sizeof(sr_ethernet_hdr_t));
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(ip_hdr + sizeof(sr_ip_hdr_t));
@@ -676,6 +679,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   Debug("\n-------------------------------n");
   Debug("\n--------LARGO OBTENCION--------n");
   Debug("\n---------------%d--------------n", size);
+  Debug("\n---------------%d--------------n", lsu_hdr->num_adv);
   Debug("\n-------------------------------n");
   Debug("\n-------------------------------n");
   Debug("-> checksum del paquete: %d\n", ospf_hdr->csum);
