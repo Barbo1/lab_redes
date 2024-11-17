@@ -488,7 +488,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
 
   pwospf_lock(sr->ospf_subsys);
   elem = sr->routing_table;
-  while (elem) {
+  while (elem && (elem->admin_dst == 0 || elem->admin_dst == 1)) {
     lsa_part->subnet = elem->dest.s_addr;
     lsa_part->mask = elem->mask.s_addr;
     lsa_part->rid = sr_get_interface(sr, elem->interface)->neighbor_id;
@@ -641,9 +641,6 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
 
     struct sr_if * elem = sr->if_list;
     while (elem) {
-      Debug("interfaz iternado: %s\n", elem->name);
-      Debug("interfaz entrada: %s\n", rx_if->name);
-      Debug("ip del vecion: %d\n\n", elem->neighbor_ip);
       if (elem->ip != rx_if->ip && elem->neighbor_ip != 0) {
         powspf_hello_lsu_param_t * lsu_param = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
         lsu_param->interface = elem;
@@ -677,7 +674,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   powspf_rx_lsu_param_t* rx_lsu_param = ((powspf_rx_lsu_param_t*)(arg));
 
   unsigned size = sizeof(sr_ethernet_hdr_t);
-  sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(rx_lsu_param->packet + size);
   size += sizeof(sr_ip_hdr_t);
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(rx_lsu_param->packet + size);
   size += sizeof(ospfv2_hdr_t);
@@ -724,7 +720,7 @@ if (ospf_hdr->rid == g_router_id.s_addr) {
     }
 
     i++;
-    lsa_hdr += i * sizeof(ospfv2_lsa_t);
+    lsa_hdr += sizeof(ospfv2_lsa_t);
   }
 
   dijkstra_param_t params;
@@ -732,40 +728,74 @@ if (ospf_hdr->rid == g_router_id.s_addr) {
   params.rid.s_addr = ospf_hdr->rid;
   params.topology = g_topology;
   params.mutex = g_dijkstra_mutex;
-    
-  Debug("-->>--->>> antes de dijkstra.\n");
 
   pwospf_lock(rx_lsu_param->sr->ospf_subsys);
-
   if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) { 
     perror("pthread_create");
     assert(0);
   } else {
     pthread_detach(g_dijkstra_thread);
   }
-  
   pwospf_lock(rx_lsu_param->sr->ospf_subsys);
-  
-  Debug("-->>--->>> luego de dijkstra.\n");
 
   print_topolgy_table (g_topology);
 
-  Debug("-->>--->>> 1\n");
   struct sr_if * elem = rx_lsu_param->sr->if_list;
   while (elem) {
-    Debug("-->>--->>> %s:_\n", elem->name);
-    if (elem->neighbor_id != ip_hdr->ip_id) {
-      Debug("-->>--->>> 2.\n");
-      powspf_hello_lsu_param_t * lsu_param = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
-      lsu_param->interface = elem;
-      lsu_param->sr = rx_lsu_param->sr;
+    if (elem->neighbor_id != rx_lsu_param->rx_if->neighbor_id) {
 
-      if (pthread_create(&g_all_lsu_thread, NULL, send_lsu, lsu_param)) { 
-        perror("pthread_create");
-        assert(0);
+      uint32_t ipDst = elem->neighbor_ip;
+
+      /* Construcción del paquete. */
+      uint8_t * packet;
+      unsigned len = construir_packete_lsu (&packet, rx_lsu_param->sr, elem, 64);
+      
+      sr_ip_hdr_t * ip_hdr_new = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+      ip_hdr_new->ip_src = elem->ip;
+      ip_hdr_new->ip_dst = elem->neighbor_ip;
+      sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
+
+      Debug("\n\nPWOSPF: LSU packet constructed\n");
+
+      /* envio del paquete.
+       * */
+      struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
+
+      /* Se conoce la MAC. 
+       * */
+      if (entrada_cache) {
+        printf("#### -> Found MAC in the cache\n");
+
+        memcpy(ether_hdr->ether_shost, elem->addr, ETHER_ADDR_LEN);
+        memcpy(ether_hdr->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
+
+        /* envio del paquete.
+         * */
+        sr_send_packet (
+          rx_lsu_param->sr, 
+          packet, 
+          len, 
+          elem->name
+        );
+
+        free(entrada_cache);
+
+        /* NO se conoce la MAC. 
+         * */
       } else {
-        pthread_detach(g_all_lsu_thread);
+        printf("#### -> MAC not found\n");
+
+        struct sr_arpreq * req = sr_arpcache_queuereq (
+          &(rx_lsu_param->sr->cache), 
+          ipDst,
+          packet, 
+          len, 
+          elem->name
+        );
+        handle_arpreq (rx_lsu_param->sr, req);
       }
+
+      free(packet);
     }
 
     elem = elem->next;
