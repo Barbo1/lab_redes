@@ -600,7 +600,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
 
   struct sr_if * elem = sr->if_list;
   while (elem) {
-    if (elem->ip != rx_if->ip) {
+    if (elem->ip != rx_if->ip && elem->neighbor_ip != 0) {
       uint32_t ipDst = elem->neighbor_ip;
 
       /* Construcción del paquete. */
@@ -651,6 +651,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
         handle_arpreq (sr, req);
       }
 
+      free(packet_new);
       printf("#### -> Packet Sent.\n");
     }
     elem = elem->next;
