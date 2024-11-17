@@ -495,7 +495,7 @@ unsigned construir_packete_lsu (uint8_t * packet, struct sr_instance* sr, struct
 void* send_lsu(void* arg)
 {
   powspf_hello_lsu_param_t* lsu_param = ((powspf_hello_lsu_param_t*)(arg));
-  Debug("\n\nPWOSPF: Constructing HELLO packet for interface %s: \n", lsu_param->interface->name);
+  Debug("\n\n()()()()()() -> Constructing and sending a LSU packet for interface %s: \n", lsu_param->interface->name);
 
   /* Solo envío LSUs si del otro lado hay un router*/
   if (lsu_param->interface->neighbor_ip == 0) {
@@ -504,11 +504,12 @@ void* send_lsu(void* arg)
 
   /* Construyo el LSU */
   Debug("\n\nPWOSPF: Constructing LSU packet\n");
-
   /* Construcción del paquete. */
   uint8_t * packet;
   unsigned len = construir_packete_lsu (packet, lsu_param->sr, lsu_param->interface, 64);
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
+  
+  Debug("\n\nPWOSPF: LSU packet constructed\n");
 
   /* envio del paquete.
    * */
