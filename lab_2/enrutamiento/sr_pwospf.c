@@ -589,8 +589,13 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   }
 
   struct sr_if * elem = sr->if_list;
-  while (!elem && elem->neighbor_id != ip_hdr->ip_id) {
+  while (elem && elem->neighbor_id != ip_hdr->ip_id) {
     elem = elem->next;
+  }
+
+  if (!elem) {
+    Debug("-> PWOSPF: HELLO Packet dropped, an error has ocurred\n");
+    return;
   }
 
   if (hello_hdr->nmask != elem->mask) {
@@ -604,41 +609,39 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     return;
   }
   
-  if (!elem) {
-    elem->neighbor_id = ospf_hdr->rid;
-    elem->neighbor_ip = ip_hdr->ip_id;
+  elem->neighbor_id = ospf_hdr->rid;
+  elem->neighbor_ip = ip_hdr->ip_id;
 
-    struct ospfv2_neighbor * new_neighbor = (struct ospfv2_neighbor *)malloc(sizeof(struct ospfv2_neighbor));
-    new_neighbor->neighbor_id.s_addr = ospf_hdr->rid;
-    new_neighbor->alive = 0;
-    add_neighbor(g_neighbors, new_neighbor);
+  struct ospfv2_neighbor * new_neighbor = (struct ospfv2_neighbor *)malloc(sizeof(struct ospfv2_neighbor));
+  new_neighbor->neighbor_id.s_addr = ospf_hdr->rid;
+  new_neighbor->alive = 0;
+  add_neighbor(g_neighbors, new_neighbor);
 
-    struct in_addr subnet;
-    subnet.s_addr = rx_if->ip & rx_if->mask;
+  struct in_addr subnet;
+  subnet.s_addr = rx_if->ip & rx_if->mask;
 
-    refresh_neighbors_alive(g_neighbors, subnet);
+  refresh_neighbors_alive(g_neighbors, subnet);
 
-    sr_print_routing_table(sr);
+  sr_print_routing_table(sr);
 
-    elem = sr->if_list;
-    while (elem) {
-      Debug("\n\n%%%%%%%%%%- %d, %d: \n", elem->ip, rx_if->ip);
-      Debug("\n\n%%%%%%%%%%- %d: \n", elem->neighbor_id);
-      if (elem->neighbor_id != 0 || elem->ip != rx_if->ip) {
-        Debug("-> -> sendin a lsu packet to a interface %d .\n", elem->name);
-        powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
-        params->sr = sr;
-        params->interface = elem;
-        
-        if (pthread_create(&g_neighbors_thread, NULL, send_lsu, params)) { 
-          perror("pthread_create");
-          assert(0);
-        } else {
-          pthread_detach(g_neighbors_thread);
-        }
+  elem = sr->if_list;
+  while (elem) {
+    Debug("\n\n%%%%%%%%%%- %d, %d: \n", elem->ip, rx_if->ip);
+    Debug("\n\n%%%%%%%%%%- %d: \n", elem->neighbor_id);
+    if (elem->neighbor_id != 0 || elem->ip != rx_if->ip) {
+      Debug("-> -> sendin a lsu packet to a interface %d .\n", elem->name);
+      powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
+      params->sr = sr;
+      params->interface = elem;
+      
+      if (pthread_create(&g_neighbors_thread, NULL, send_lsu, params)) { 
+        perror("pthread_create");
+        assert(0);
+      } else {
+        pthread_detach(g_neighbors_thread);
       }
-      elem = elem->next;
     }
+    elem = elem->next;
   }
   Debug("-> Has finished.\n");
 } /* -- sr_handle_pwospf_hello_packet -- */
