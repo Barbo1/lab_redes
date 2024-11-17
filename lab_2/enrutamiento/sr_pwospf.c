@@ -624,7 +624,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   }
   
   elem->neighbor_id = ospf_hdr->rid;
-  elem->neighbor_ip = ip_hdr->ip_id;
+  elem->neighbor_ip = ip_hdr->ip_src;
 
   struct ospfv2_neighbor * new_neighbor = (struct ospfv2_neighbor *)malloc(sizeof(struct ospfv2_neighbor));
   new_neighbor->neighbor_id.s_addr = ospf_hdr->rid;
