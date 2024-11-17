@@ -675,38 +675,38 @@ if (ospf_hdr->rid == g_router_id.s_addr) {
 
   int i = 0;
   while (i < lsu_hdr->num_adv) {
-    struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
-    router_id.s_addr = ospf_hdr->rid;
-    neighbor_id.s_addr = lsa_hdr->rid;
-    subnet.s_addr = lsa_hdr->subnet;
-    mask.s_addr = lsa_hdr->mask;
-    next_hop.s_addr = 0;
-    
-    Debug("-->>--->>>---->>>> \n");
+    if (ospf_hdr->rid != 0) {
+      struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
+      router_id.s_addr = ospf_hdr->rid;
+      neighbor_id.s_addr = lsa_hdr->rid;
+      subnet.s_addr = lsa_hdr->subnet;
+      mask.s_addr = lsa_hdr->mask;
+      next_hop.s_addr = 0;
 
-    if (!search_topolgy_table(g_topology, lsa_hdr->subnet)) {
-      add_topology_entry (
-        g_topology, 
-        create_ospfv2_topology_entry(
+      if (!search_topolgy_table(g_topology, lsa_hdr->subnet)) {
+        add_topology_entry (
+          g_topology, 
+          create_ospfv2_topology_entry(
+            router_id,
+            subnet,
+            mask,
+            neighbor_id,
+            next_hop,
+            lsu_hdr->seq
+          )
+        );
+        
+      } else {
+        refresh_topology_entry(
+          g_topology, 
           router_id,
           subnet,
           mask,
           neighbor_id,
           next_hop,
           lsu_hdr->seq
-        )
-      );
-      
-    } else {
-      refresh_topology_entry(
-        g_topology, 
-        router_id,
-        subnet,
-        mask,
-        neighbor_id,
-        next_hop,
-        lsu_hdr->seq
-      );
+        );
+      }
     }
 
     i++;
