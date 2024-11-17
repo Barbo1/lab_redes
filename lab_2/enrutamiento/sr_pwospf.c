@@ -438,7 +438,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   ip_hdr->ip_hl = 5;
   ip_hdr->ip_tos = 0;
   ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
-  ip_hdr->ip_p = htons(ip_protocol_ospfv2);
+  ip_hdr->ip_p = ip_protocol_ospfv2;
   ip_hdr->ip_id = 0;
   ip_hdr->ip_dst = interface->neighbor_ip;
   ip_hdr->ip_src = interface->ip;
