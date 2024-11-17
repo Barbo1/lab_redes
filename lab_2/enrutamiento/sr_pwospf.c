@@ -229,17 +229,24 @@ void* check_topology_entries_age(void* arg)
 {
   struct sr_instance* sr = (struct sr_instance*)arg;
 
-  /*
   if (check_topology_age(g_topology)) {
+    dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
+    params->sr = sr;
+    params->rid = g_router_id;
+    params->topology = g_topology;
+    params->mutex = g_dijkstra_mutex;
 
-    if (pthread_create(&g_topology_entries_thread, NULL, check_topology_age, g_)) { 
+    pwospf_lock(sr->ospf_subsys);
+
+    if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) { 
       perror("pthread_create");
       assert(0);
     } else {
-      pthread_detach(g_topology_entries_thread);
+      pthread_detach(g_dijkstra_thread);
     }
+    
+    pwospf_lock(sr->ospf_subsys);
   }
-  */
 
   return NULL;
 } /* -- check_topology_entries_age -- */
