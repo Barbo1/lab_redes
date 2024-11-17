@@ -203,9 +203,12 @@ void* pwospf_run_thread(void* arg)
 void* check_neighbors_life(void* arg)
 {
     struct sr_instance* sr = (struct sr_instance*)arg;
-    struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors);
 
     while(1) {
+      usleep(1000000);
+
+      struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors);
+
       if (vecinos_muertos) {
         while (vecinos_muertos) {
           struct sr_if * inter = sr->if_list;
@@ -255,8 +258,8 @@ void* check_topology_entries_age(void* arg)
       
       pwospf_lock(sr->ospf_subsys);
     }
-    sr_print_routing_table(sr);
     print_topolgy_table(g_topology);
+    sr_print_routing_table(sr);
   }
 
   return NULL;
