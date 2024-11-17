@@ -573,6 +573,7 @@ void* send_lsu(void* arg)
 
 void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsigned int length, struct sr_if* rx_if)
 {
+  Debug("-> Entering hello handling.\n");
   sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t * )(packet + sizeof(sr_ethernet_hdr_t));
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
   ospfv2_hello_hdr_t * hello_hdr = (ospfv2_hello_hdr_t * )(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
@@ -616,6 +617,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     elem = sr->if_list;
     while (!elem) {
       if (elem->neighbor_id != 0 || elem->ip != rx_if->ip) {
+        Debug("-> -> sendin a lsu packet to a interface %d .\n", elem->name);
         powspf_hello_lsu_param_t params;
         params.sr = sr;
         params.interface = elem;
@@ -624,6 +626,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
       elem = elem->next;
     }
   }
+  Debug("-> Has finished.\n");
 } /* -- sr_handle_pwospf_hello_packet -- */
 
 
