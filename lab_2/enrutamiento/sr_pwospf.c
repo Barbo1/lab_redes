@@ -480,12 +480,6 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   }
   pwospf_unlock(sr->ospf_subsys);
 
-  Debug("\n-------------------------------n");
-  Debug("\n-------LARGO EN CREACION-------n");
-  Debug("\n---------------%d--------------n", ospf_size);
-  Debug("\n---------------%d--------------n", lsu_hdr->num_adv);
-  Debug("\n-------------------------------n");
-  Debug("\n-------------------------------n");
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, ospf_size);
 
   return len;
@@ -509,7 +503,6 @@ void* send_lsu(void* arg)
     return NULL;
   }
 
-  Debug("\n\nPWOSPF: Constructing LSU packet\n");
   uint32_t ipDst = lsu_param->interface->neighbor_ip;
 
   /* Construcción del paquete. */
@@ -522,9 +515,6 @@ void* send_lsu(void* arg)
   /* envio del paquete.
    * */
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(lsu_param->sr->cache), ipDst);
-
-  Debug("\nImprimo la interfaz por la que sale:\n");
-  print_addr_ip_int(ipDst);
 
   /* Se conoce la MAC. 
    * */
@@ -576,14 +566,6 @@ void* send_lsu(void* arg)
   free(packet);
 
   printf("$$$$ -> Packet Sent.\n");
-  printf("--------------------------------------\n");
-
-  /*
-  Debug("-> PWOSPF: Sending HELLO Packet of length = %d, out of the interface: %s\n", packet_len, hello_param->interface->name);
-  Debug("      [Router ID = %s]\n", inet_ntoa(g_router_id));
-  Debug("      [Router IP = %s]\n", inet_ntoa(ip));
-  Debug("      [Network Mask = %s]\n", inet_ntoa(mask));
-  */
   
   return NULL;
 } /* -- send_lsu -- */
@@ -679,16 +661,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   size += sizeof(ospfv2_lsu_hdr_t);
   ospfv2_lsa_t * lsa_hdr = (ospfv2_lsa_t *)(rx_lsu_param->packet + size);
   
-  Debug("\n---------------%d--------------n", size);
-  Debug("\n---------------%d--------------n", rx_lsu_param->length);
-  Debug("\n-------------------------------n");
-  Debug("\n--------LARGO OBTENCION--------n");
-  Debug("\n---------------%d--------------n", size);
-  Debug("\n---------------%d--------------n", lsu_hdr->num_adv);
-  Debug("\n-------------------------------n");
-  Debug("\n-------------------------------n");
-  Debug("-> checksum del paquete: %d\n", ospf_hdr->csum);
-  Debug("-> checksum calculado: %d\n", ospfv2_cksum(ospf_hdr, size));
   if (ospf_hdr->csum != ospfv2_cksum(ospf_hdr, size)) {
     Debug("-> PWOSPF: LSU Packet dropped, invalid checksum\n");
     return NULL;
@@ -701,7 +673,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   
   struct in_addr rid;
   rid.s_addr = ospf_hdr->rid;
-  if (check_sequence_number(g_topology, rid, lsu_hdr->seq)) {
+  if (!check_sequence_number(g_topology, rid, lsu_hdr->seq)) {
     Debug("-> PWOSPF: LSU Packet dropped, repeated sequence number\n");
     return NULL;
   }
