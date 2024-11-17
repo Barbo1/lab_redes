@@ -616,6 +616,12 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
 
       ospfv2_hdr_t * ospf_hdr_new = (ospfv2_hdr_t *)(packet_new + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
       ospf_hdr_new->rid = ospf_hdr->rid;
+      ospf_hdr_new->csum = ospfv2_cksum(ospf_hdr_new, size);
+
+      printf("$$$ -> Packet Info:\n");
+      print_hdr_eth(packet);
+      print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+      print_hdr_ospf(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
       Debug("\n\nPWOSPF: LSU packet constructed\n");
 
