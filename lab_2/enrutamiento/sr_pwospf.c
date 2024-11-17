@@ -81,7 +81,6 @@ int pwospf_init(struct sr_instance* sr)
 
     g_sequence_num = 0;
 
-
     struct in_addr zero;
     zero.s_addr = 0;
     g_neighbors = create_ospfv2_neighbor(zero);
@@ -781,71 +780,16 @@ if (ospf_hdr->rid == g_router_id.s_addr) {
     Debug("-->>--->>> %s:_\n", elem->name);
     if (elem->neighbor_id != ip_hdr->ip_id) {
       Debug("-->>--->>> 2.\n");
-      uint32_t ipDst = elem->neighbor_ip;
+      powspf_hello_lsu_param_t * lsu_param = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
+      lsu_param->interface = elem;
+      lsu_param->sr = rx_lsu_param->sr;
 
-      /* comprobacion de ttl. */
-      if (--lsu_hdr->ttl <= 0) {
-        return NULL;
-      }
-
-      /* Construcción del paquete. */
-      unsigned len_new = 
-        sizeof(sr_ethernet_hdr_t) + 
-        sizeof(sr_ip_hdr_t) + 
-        sizeof(ospfv2_hdr_t) + 
-        sizeof(ospfv2_lsu_hdr_t) + 
-        lsu_hdr->num_adv * sizeof(ospfv2_lsa_t);
-
-      uint8_t * packet_new = (uint8_t *)malloc(len_new);
-      memcpy(packet_new, rx_lsu_param->packet, len_new);
-
-      sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet_new;
-
-      unsigned size_new = sizeof(sr_ethernet_hdr_t);
-      sr_ip_hdr_t * ip_hdr_new = (sr_ip_hdr_t *)(rx_lsu_param->packet + size_new);
-      ip_hdr_new->ip_src = elem->ip;
-      ip_hdr_new->ip_dst = ipDst;
-
-      Debug("-->>--->>> 3.\n");
-
-      /* envio del paquete.
-       * */
-      struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
-      Debug("-->>--->>> 4.\n");
-
-      /* Se conoce la MAC. 
-       * */
-      if (entrada_cache) {
-        printf("#### -> Found MAC in the cache\n");
-
-        memcpy(ether_hdr->ether_shost, elem->addr, ETHER_ADDR_LEN);
-        memcpy(ether_hdr->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
-        sr_send_packet (
-          rx_lsu_param->sr, 
-          packet_new, 
-          len_new, 
-          elem->name
-        );
-        
-        free(entrada_cache);
-
-      /* NO se conoce la MAC. 
-       * */
+      if (pthread_create(&g_all_lsu_thread, NULL, send_lsu, lsu_param)) { 
+        perror("pthread_create");
+        assert(0);
       } else {
-        printf("#### -> MAC not found\n");
-
-        struct sr_arpreq * req = sr_arpcache_queuereq (
-          &(rx_lsu_param->sr->cache), 
-          elem->neighbor_ip,
-          packet_new, 
-          len_new, 
-          elem->name
-        );
-
-        handle_arpreq (rx_lsu_param->sr, req);
+        pthread_detach(g_all_lsu_thread);
       }
-
-      free(packet_new);
     }
 
     elem = elem->next;
