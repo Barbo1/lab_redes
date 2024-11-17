@@ -230,15 +230,17 @@ void* check_topology_entries_age(void* arg)
 {
   struct sr_instance* sr = (struct sr_instance*)arg;
 
+  /*
   if (check_topology_age(g_topology)) {
 
-    if (pthread_create(&g_topology_entries_thread, NULL, send_lsu, sr)) { 
+    if (pthread_create(&g_topology_entries_thread, NULL, check_topology_age, g_)) { 
       perror("pthread_create");
       assert(0);
     } else {
       pthread_detach(g_topology_entries_thread);
     }
   }
+  */
 
   return NULL;
 } /* -- check_topology_entries_age -- */
@@ -272,11 +274,11 @@ void* send_hellos(void* arg)
         powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
         params->interface = inter;
         params->sr = sr;
-        if (pthread_create(&g_dijkstra_thread, NULL, send_hello_packet, params)) { 
+        if (pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, params)) { 
           perror("pthread_create");
           assert(0);
         } else {
-          pthread_detach(g_dijkstra_thread);
+          pthread_detach(g_hello_packet_thread);
         }
         inter->helloint = 0;
       }
@@ -398,11 +400,11 @@ void* send_all_lsu(void* arg) {
         lsu_param->interface = inter;
         lsu_param->sr = sr;
 
-        if (pthread_create(&g_neighbors_thread, NULL, check_neighbors_life, lsu_param)) { 
+        if (pthread_create(&g_all_lsu_thread, NULL, send_lsu, lsu_param)) { 
           perror("pthread_create");
           assert(0);
         } else {
-          pthread_detach(g_neighbors_thread);
+          pthread_detach(g_all_lsu_thread);
         }
       }
     }
@@ -641,11 +643,11 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
       params->sr = sr;
       params->interface = elem;
       
-      if (pthread_create(&g_lsu_thread, NULL, run_dijkstra, params)) { 
+      if (pthread_create(&g_hello_packet_thread, NULL, run_dijkstra, params)) { 
         perror("pthread_create");
         assert(0);
       } else {
-        pthread_detach(g_lsu_thread);
+        pthread_detach(g_hello_packet_thread);
       }
     }
     elem = elem->next;
@@ -738,11 +740,11 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   params.topology = g_topology;
   params.mutex = g_dijkstra_mutex;
 
-  if (pthread_create(&g_rx_lsu_thread, NULL, run_dijkstra, &params)) { 
+  if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) { 
     perror("pthread_create");
     assert(0);
   } else {
-    pthread_detach(g_rx_lsu_thread);
+    pthread_detach(g_dijkstra_thread);
   }
 
   struct sr_if * elem = rx_lsu_param->sr->if_list;
