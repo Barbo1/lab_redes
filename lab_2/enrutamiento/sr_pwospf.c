@@ -497,8 +497,9 @@ void* send_lsu(void* arg)
   powspf_hello_lsu_param_t* lsu_param = ((powspf_hello_lsu_param_t*)(arg));
   Debug("\n\n()()()()()() -> Constructing and sending a LSU packet for interface %s: \n", lsu_param->interface->name);
 
-  /* Solo envío LSUs si del otro lado hay un router*/
-  if (lsu_param->interface->neighbor_ip == 0) {
+  /* Solo envío LSUs si del otro lado hay un router */
+  if (lsu_param->interface->neighbor_id == 0) {
+    Debug("\nERROR: the interface %s goes to no router.\n");
     return NULL;
   }
 
@@ -638,7 +639,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   while (elem) {
     Debug("\n\n%%%%%%%%%%- %d, %d \n", elem->ip, rx_if->ip);
     Debug("\n\n%%%%%%%%%%- %d \n", elem->neighbor_id);
-    if (elem->neighbor_id != 0 && elem->ip != rx_if->ip) {
+    if (elem->ip != rx_if->ip) {
       Debug("-> -> sendin a lsu packet to a interface %s .\n", elem->name);
       powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
       params->sr = sr;
