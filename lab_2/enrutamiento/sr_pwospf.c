@@ -498,7 +498,7 @@ void* send_lsu(void* arg)
 
   /* Solo envío LSUs si del otro lado hay un router */
   if (lsu_param->interface->neighbor_id == 0) {
-    Debug("\nERROR: the interface %s goes to no router.\n", );
+    Debug("\nERROR: the interface goes to no router.\n");
     return NULL;
   }
 
