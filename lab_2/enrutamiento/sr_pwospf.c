@@ -594,7 +594,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   }
 
   /* Chequeo del intervalo de HELLO */
-  if (hello_hdr->helloint == OSPF_DEFAULT_HELLOINT) {
+  if (hello_hdr->helloint != OSPF_DEFAULT_HELLOINT) {
     Debug("-> PWOSPF: HELLO Packet dropped, invalid hello interval\n");
     return;
   }
