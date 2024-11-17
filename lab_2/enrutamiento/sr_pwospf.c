@@ -589,15 +589,14 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   rx_if->neighbor_id = ospf_hdr->rid;
   rx_if->neighbor_ip = ip_hdr->ip_src;
 
-  struct ospfv2_neighbor * new_neighbor = (struct ospfv2_neighbor *)malloc(sizeof(struct ospfv2_neighbor));
-  new_neighbor->neighbor_id.s_addr = ospf_hdr->rid;
-  new_neighbor->alive = 0;
-  add_neighbor(g_neighbors, new_neighbor);
+  struct in_addr res;
 
-  struct in_addr neigbor_id;
-  neigbor_id.s_addr = ospf_hdr->rid;
-
-  refresh_neighbors_alive(g_neighbors, neigbor_id);
+  res.s_addr = ospf_hdr->rid;
+  add_neighbor(
+    g_neighbors, 
+    create_ospfv2_neighbor(res)
+  );
+  refresh_neighbors_alive(g_neighbors, res);
 
   sr_print_routing_table(sr);
 
@@ -746,6 +745,7 @@ if (ospf_hdr->rid == g_router_id.s_addr) {
 
     elem = elem->next;
   }
+  sr_print_routing_table(rx_lsu_param->sr);
           
   return NULL;
 } /* -- sr_handle_pwospf_lsu_packet -- */
