@@ -479,7 +479,14 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   pwospf_unlock(sr->ospf_subsys);
 
   unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
-  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
+  uint32_t a = ospfv2_cksum(ospf_hdr, size);
+  Debug("\n--------------------------------------n");
+  Debug("\n--------------------------------------n");
+  Debug("\n-----------------%d--------------------n", a);
+  Debug("\n--------------------------------------n");
+  Debug("\n--------------------------------------n");
+  ospf_hdr->csum = a;
+
 
   return len;
 }
