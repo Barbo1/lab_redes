@@ -356,8 +356,6 @@ void* send_hello_packet(void* arg) {
   print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
   print_hdr_ospf(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
-  printf("--------------------------------------\n");
-
   /* envio del paquete.
    * */
   sr_send_packet (
@@ -370,7 +368,6 @@ void* send_hello_packet(void* arg) {
   free(packet);
 
   printf("$$$$ -> Packet Sent.\n");
-  printf("--------------------------------------\n");
 
   return NULL;
 } /* -- send_hello_packet -- */
@@ -428,8 +425,6 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
 
   unsigned ospf_size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
   unsigned len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + ospf_size;
-  Debug("\n---------------%d--------------n", ospf_size);
-  Debug("\n---------------%d--------------n", len);
   *packet = (uint8_t *)malloc(len);
 
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)*packet;
@@ -686,6 +681,8 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     mask.s_addr = lsa_hdr->mask;
     neighbor_id.s_addr = lsa_hdr->rid;
     next_hop.s_addr = ip_hdr->ip_src;
+    
+    Debug("-->>--->>>---->>>> \n");
 
     if (!search_topolgy_table(g_topology, lsa_hdr->subnet)) {
       add_topology_entry (
@@ -721,6 +718,8 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   params.rid.s_addr = ospf_hdr->rid;
   params.topology = g_topology;
   params.mutex = g_dijkstra_mutex;
+    
+  Debug("-->>--->>> antes de dijkstra.\n");
 
   if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) { 
     perror("pthread_create");
@@ -728,6 +727,10 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   } else {
     pthread_detach(g_dijkstra_thread);
   }
+  
+  Debug("-->>--->>> luego de dijkstra.\n");
+
+  print_topolgy_table (g_topology);
 
   struct sr_if * elem = rx_lsu_param->sr->if_list;
   while (elem) {
