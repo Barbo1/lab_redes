@@ -331,11 +331,11 @@ void* send_hello_packet(void* arg) {
   ospf_hdr->autype = 0;
   ospf_hdr->audata = 0;
   ospf_hdr->csum = 0;
-  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t));
-
   ospf_hello_hdr->nmask = hello_param->interface->mask;
   ospf_hello_hdr->padding = 0;
   ospf_hello_hdr->helloint = OSPF_DEFAULT_HELLOINT;
+
+  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t));
 
   printf("$$$$ -> Packet Completed.\n");
   printf("$$$ -> Packet Info:\n");
@@ -443,7 +443,6 @@ unsigned construir_packete_lsu (uint8_t * packet, struct sr_instance* sr, struct
   ospf_hdr->autype = 0;
   ospf_hdr->audata = 0;
   ospf_hdr->csum = 0;
-  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t));
 
   ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
   lsu_hdr->unused = 0;
@@ -463,6 +462,9 @@ unsigned construir_packete_lsu (uint8_t * packet, struct sr_instance* sr, struct
     elem = elem->next;
     lsa_part += sizeof(ospfv2_lsa_t);
   }
+
+  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t));
+
   pwospf_unlock(sr->ospf_subsys);
 
   return len;
