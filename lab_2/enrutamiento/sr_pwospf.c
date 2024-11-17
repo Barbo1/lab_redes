@@ -617,7 +617,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     sr_print_routing_table(sr);
 
     elem = sr->if_list;
-    while (!elem) {
+    while (elem) {
       Debug("\n\n%%%%%%%%%%- %d, %d: \n", elem->ip, rx_if->ip);
       Debug("\n\n%%%%%%%%%%- %d: \n", elem->neighbor_id);
       if (elem->neighbor_id != 0 || elem->ip != rx_if->ip) {
@@ -719,7 +719,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   pthread_create(&g_rx_lsu_thread, NULL, run_dijkstra, &params);
 
   struct sr_if * elem = rx_lsu_param->sr->if_list;
-  while (!elem) {
+  while (elem) {
     if (elem->neighbor_id != ip_hdr->ip_id) {
       powspf_hello_lsu_param_t params_send;
       params_send.sr = rx_lsu_param->sr;
