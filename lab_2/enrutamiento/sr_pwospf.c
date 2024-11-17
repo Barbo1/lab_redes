@@ -235,6 +235,8 @@ void* check_topology_entries_age(void* arg)
   struct sr_instance* sr = (struct sr_instance*)arg;
 
   while(1) {
+    usleep(1000000);
+
     if (check_topology_age(g_topology)) {
       dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
       params->sr = sr;
