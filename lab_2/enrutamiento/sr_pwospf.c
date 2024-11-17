@@ -643,7 +643,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
       params->sr = sr;
       params->interface = elem;
       
-      if (pthread_create(&g_hello_packet_thread, NULL, run_dijkstra, params)) { 
+      if (pthread_create(&g_hello_packet_thread, NULL, send_lsu, params)) { 
         perror("pthread_create");
         assert(0);
       } else {
