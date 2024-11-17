@@ -416,7 +416,7 @@ void* send_all_lsu(void* arg) {
   return NULL;
 } /* -- send_all_lsu -- */
 
-unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struct sr_if* interface, uint8_t ttl) {
+unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struct sr_if* interface, uint8_t ttl, uint32_t ipDst) {
   pwospf_lock(sr->ospf_subsys);
   unsigned lsas = 0;
   struct sr_rt * elem = sr->routing_table;
@@ -440,7 +440,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
   ip_hdr->ip_p = htons(ip_protocol_ospfv2);
   ip_hdr->ip_id = 0;
-  ip_hdr->ip_dst = htonl(OSPF_AllSPFRouters);
+  ip_hdr->ip_dst = ipDst;
   ip_hdr->ip_src = interface->ip;
   ip_hdr->ip_off = IP_DF;
   ip_hdr->ip_ttl = ttl;
@@ -498,7 +498,7 @@ void* send_lsu(void* arg)
 
   /* Solo envío LSUs si del otro lado hay un router */
   if (lsu_param->interface->neighbor_id == 0) {
-    Debug("\nERROR: the interface %s goes to no router.\n");
+    Debug("\nERROR: the interface %s goes to no router.\n", );
     return NULL;
   }
 
@@ -506,7 +506,7 @@ void* send_lsu(void* arg)
   Debug("\n\nPWOSPF: Constructing LSU packet\n");
   /* Construcción del paquete. */
   uint8_t * packet;
-  unsigned len = construir_packete_lsu (&packet, lsu_param->sr, lsu_param->interface, 64);
+  unsigned len = construir_packete_lsu (&packet, lsu_param->sr, lsu_param->interface, 64, lsu_param->interface->neighbor_ip);
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
   
   Debug("\n\nPWOSPF: LSU packet constructed\n");
@@ -751,18 +751,16 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   struct sr_if * elem = rx_lsu_param->sr->if_list;
   while (elem) {
     if (elem->neighbor_id != ip_hdr->ip_id) {
-      powspf_hello_lsu_param_t params_send;
-      params_send.sr = rx_lsu_param->sr;
-      params_send.interface = elem;
+      uint32_t ipDst = elem->neighbor_ip;
 
       /* Construcción del paquete. */
       uint8_t * packet;
-      unsigned len = construir_packete_lsu (packet, rx_lsu_param->sr, elem, lsu_hdr->ttl - 1);
+      unsigned len = construir_packete_lsu (&packet, rx_lsu_param->sr, elem, lsu_hdr->ttl - 1, ipDst);
       sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
 
       /* envio del paquete.
        * */
-      struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), elem->neighbor_ip);
+      struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
 
       /* Se conoce la MAC. 
        * */
