@@ -335,7 +335,8 @@ void* send_hello_packet(void* arg) {
   ospf_hello_hdr->padding = 0;
   ospf_hello_hdr->helloint = OSPF_DEFAULT_HELLOINT;
 
-  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t));
+  unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t);
+  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
 
   printf("$$$$ -> Packet Completed.\n");
   printf("$$$ -> Packet Info:\n");
@@ -463,7 +464,8 @@ unsigned construir_packete_lsu (uint8_t * packet, struct sr_instance* sr, struct
     lsa_part += sizeof(ospfv2_lsa_t);
   }
 
-  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t));
+  unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
+  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
 
   pwospf_unlock(sr->ospf_subsys);
 
@@ -575,7 +577,8 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
   ospfv2_hello_hdr_t * hello_hdr = (ospfv2_hello_hdr_t * )(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
 
-  if (ospf_hdr->csum != ospfv2_cksum(ospf_hdr, sizeof (ospfv2_hdr_t) + sizeof (ospfv2_hello_hdr_t))) {
+  unsigned size = sizeof (ospfv2_hdr_t) + sizeof (ospfv2_hello_hdr_t);
+  if (ospf_hdr->csum != ospfv2_cksum(ospf_hdr, size)) {
     Debug("-> PWOSPF: HELLO Packet dropped, invalid checksum\n");
     return;
   }
@@ -648,7 +651,8 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(ospf_hdr + sizeof(ospfv2_hdr_t));
   ospfv2_lsa_t * lsa_hdr = (ospfv2_lsa_t *)(lsu_hdr + sizeof(ospfv2_lsu_hdr_t));
 
-  if (ospf_hdr->csum != ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsu_hdr->num_adv * sizeof(ospfv2_lsa_t))) {
+  unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsu_hdr->num_adv * sizeof(ospfv2_lsa_t);
+  if (ospf_hdr->csum != ospfv2_cksum(ospf_hdr, size)) {
     Debug("-> PWOSPF: LSU Packet dropped, invalid checksum\n");
   }
 
