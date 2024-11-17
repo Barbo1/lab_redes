@@ -260,7 +260,9 @@ void* send_hellos(void* arg)
 
     struct sr_if * inter = sr->if_list;
     while (inter) {
-      if (++inter->helloint < OSPF_NEIGHBOR_TIMEOUT) {
+      Debug("\n\n%%%%%%%%%%- Iterating over %s interface: \n", inter->name);
+
+      if ((inter->helloint)++ < OSPF_NEIGHBOR_TIMEOUT) {
         powspf_hello_lsu_param_t params;
         params.interface = inter;
         params.sr = sr;
@@ -323,7 +325,7 @@ void* send_hello_packet(void* arg) {
   ospfv2_hello_hdr_t * ospf_hello_hdr = (ospfv2_hello_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
   ospf_hdr->version = OSPF_V2;
   ospf_hdr->type = OSPF_TYPE_HELLO;
-  ospf_hdr->len = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t);
+  ospf_hdr->len = htons(sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t));
   ospf_hdr->rid = g_router_id.s_addr;
   ospf_hdr->aid = 0;
   ospf_hdr->autype = 0;
@@ -435,7 +437,7 @@ unsigned construir_packete_lsu (uint8_t * packet, struct sr_instance* sr, struct
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
   ospf_hdr->version = OSPF_V2;
   ospf_hdr->type = OSPF_TYPE_LSU;
-  ospf_hdr->len = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
+  ospf_hdr->len = htons(sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t));
   ospf_hdr->rid = g_router_id.s_addr;
   ospf_hdr->aid = 0;
   ospf_hdr->autype = 0;
