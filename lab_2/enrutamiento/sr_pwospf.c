@@ -609,19 +609,16 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     return;
   }
   
-  Debug("0\n");
   elem->neighbor_id = ospf_hdr->rid;
   elem->neighbor_ip = ip_hdr->ip_id;
 
-  Debug("1\n");
   struct ospfv2_neighbor * new_neighbor = (struct ospfv2_neighbor *)malloc(sizeof(struct ospfv2_neighbor));
   new_neighbor->neighbor_id.s_addr = ospf_hdr->rid;
   new_neighbor->alive = 0;
   add_neighbor(g_neighbors, new_neighbor);
 
-  Debug("2\n");
   struct in_addr subnet;
-  subnet.s_addr = rx_if->ip & rx_if->mask;
+  subnet.s_addr = ip_hdr->ip_id;
 
   Debug("3\n");
   refresh_neighbors_alive(g_neighbors, subnet);
