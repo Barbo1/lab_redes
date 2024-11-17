@@ -250,6 +250,7 @@ void* check_topology_entries_age(void* arg)
     
     pwospf_lock(sr->ospf_subsys);
   }
+  sr_print_routing_table(sr);
 
   return NULL;
 } /* -- check_topology_entries_age -- */
