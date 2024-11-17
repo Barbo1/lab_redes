@@ -575,7 +575,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
   ospfv2_hello_hdr_t * hello_hdr = (ospfv2_hello_hdr_t * )(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
 
-  if (ospf_hdr->csum != ospfv2_cksum(ospf_hdr, sizeof (ospfv2_hdr_t))) {
+  if (ospf_hdr->csum != ospfv2_cksum(ospf_hdr, sizeof (ospfv2_hdr_t) + sizeof (ospfv2_hello_hdr_t))) {
     Debug("-> PWOSPF: HELLO Packet dropped, invalid checksum\n");
     return;
   }
@@ -646,8 +646,9 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(rx_lsu_param->packet + sizeof(sr_ethernet_hdr_t));
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(ip_hdr + sizeof(sr_ip_hdr_t));
   ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(ospf_hdr + sizeof(ospfv2_hdr_t));
+  ospfv2_lsa_t * lsa_hdr = (ospfv2_lsa_t *)(lsu_hdr + sizeof(ospfv2_lsu_hdr_t));
 
-  if (ospf_hdr->csum != ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t))) {
+  if (ospf_hdr->csum != ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsu_hdr->num_adv * sizeof(ospfv2_lsa_t))) {
     Debug("-> PWOSPF: LSU Packet dropped, invalid checksum\n");
   }
 
@@ -661,7 +662,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     Debug("-> PWOSPF: LSU Packet dropped, repeated sequence number\n");
   }
 
-  ospfv2_lsa_t * lsa_hdr = (ospfv2_lsa_t *)(lsu_hdr + sizeof(ospfv2_lsu_hdr_t));
   int i = 0;
   while (i < lsu_hdr->num_adv) {
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
