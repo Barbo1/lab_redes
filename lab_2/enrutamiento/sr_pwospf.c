@@ -605,7 +605,6 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
 
       /* Construcción del paquete. */
       uint8_t * packet_new;
-      Debug("->-->>--->>> 2\n");
       unsigned len_new = construir_packete_lsu (&packet_new, sr, elem, 64);
       sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet_new;
 
@@ -652,7 +651,6 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
         handle_arpreq (sr, req);
       }
 
-      free(packet_new);
       printf("#### -> Packet Sent.\n");
     }
     elem = elem->next;
