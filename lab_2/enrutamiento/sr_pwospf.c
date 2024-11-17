@@ -600,15 +600,23 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
 
   struct sr_if * elem = sr->if_list;
   while (elem) {
+    Debug("interfaz iternado: %s\n", elem->name);
+    Debug("interfaz entrada: %s\n", rx_if->name);
+    Debug("\nip del vecion: %d\n", elem->neighbor_ip);
     if (elem->ip != rx_if->ip && elem->neighbor_ip != 0) {
       uint32_t ipDst = elem->neighbor_ip;
 
       /* Construcción del paquete. */
+      Debug("->-->>--->> 1\n");
       uint8_t * packet_new;
+      Debug("->-->>--->> 2\n");
       unsigned len_new = construir_packete_lsu (&packet_new, sr, elem, 64);
+      Debug("->-->>--->> 3\n");
       sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet_new;
 
+      Debug("->-->>--->> 5\n");
       ospfv2_hdr_t * ospf_hdr_new = (ospfv2_hdr_t *)(packet_new + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+      Debug("->-->>--->> 4\n");
       ospf_hdr_new->rid = ospf_hdr->rid;
 
       Debug("\n\nPWOSPF: LSU packet constructed\n");
