@@ -205,12 +205,15 @@ void* check_neighbors_life(void* arg)
     struct sr_instance* sr = (struct sr_instance*)arg;
     struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors);
 
-    while (vecinos_muertos) {
-      struct sr_if * inter = sr->if_list;
-      while (inter->neighbor_id != vecinos_muertos->neighbor_id.s_addr);
-      inter->neighbor_id = 0;
-      inter->helloint = 0;
-      inter->neighbor_ip = 0;
+    if (vecinos_muertos) {
+      while (vecinos_muertos) {
+        struct sr_if * inter = sr->if_list;
+        while (inter->neighbor_id != vecinos_muertos->neighbor_id.s_addr);
+        inter->neighbor_id = 0;
+        inter->helloint = 0;
+        inter->neighbor_ip = 0;
+        vecinos_muertos = vecinos_muertos->next;
+      }
     }
 
     return NULL;
