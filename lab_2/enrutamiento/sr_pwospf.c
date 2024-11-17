@@ -528,24 +528,12 @@ void* send_lsu(void* arg)
       lsu_param->interface->name
     );
 
-    printf("#### -> Packet Sent.\n");
-    
-    printf("### -> Packet Info:\n");
-    print_hdr_eth(packet);
-    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-
     free(entrada_cache);
 
   /* NO se conoce la MAC. 
    * */
   } else {
     printf("#### -> MAC not found\n");
-
-    printf("### -> Packet Info:\n");
-    print_hdr_eth(packet);
-    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
     struct sr_arpreq * req = sr_arpcache_queuereq (
       &(lsu_param->sr->cache), 
@@ -557,10 +545,8 @@ void* send_lsu(void* arg)
     handle_arpreq (lsu_param->sr, req);
   }
 
-  printf("### -> Prueba para coso\n");
   free(packet);
-
-  printf("$$$$ -> Packet Sent.\n");
+  printf("#### -> Packet Sent.\n");
   
   return NULL;
 } /* -- send_lsu -- */
@@ -620,12 +606,58 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
       params->sr = sr;
       params->interface = elem;
       
-      if (pthread_create(&g_hello_packet_thread, NULL, send_lsu, params)) { 
-        perror("pthread_create");
-        assert(0);
+      uint32_t ipDst = elem->neighbor_ip;
+
+      /* Construcción del paquete. */
+      uint8_t * packet;
+      unsigned len = construir_packete_lsu (&packet, sr, elem, 64);
+      sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
+
+      ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+      ospf_hdr->rid = ospf_hdr->rid;
+
+      Debug("\n\nPWOSPF: LSU packet constructed\n");
+
+      /* envio del paquete.
+       * */
+      struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), ipDst);
+
+      /* Se conoce la MAC. 
+       * */
+      if (entrada_cache) {
+        printf("#### -> Found MAC in the cache\n");
+
+        memcpy(ether_hdr->ether_shost, elem->addr, ETHER_ADDR_LEN);
+        memcpy(ether_hdr->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
+
+        /* envio del paquete.
+         * */
+        sr_send_packet (
+            sr, 
+            packet, 
+            len, 
+            elem->name
+            );
+
+        free(entrada_cache);
+
+        /* NO se conoce la MAC. 
+         * */
       } else {
-        pthread_detach(g_hello_packet_thread);
+        printf("#### -> MAC not found\n");
+
+        struct sr_arpreq * req = sr_arpcache_queuereq (
+          &(sr->cache), 
+          ipDst,
+          packet, 
+          len, 
+          elem->name
+        );
+        handle_arpreq (sr, req);
       }
+
+      free(packet);
+      printf("#### -> Packet Sent.\n");
     }
     elem = elem->next;
   }
@@ -646,7 +678,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   Debug("-> Entering lsu handling.\n");
   powspf_rx_lsu_param_t* rx_lsu_param = ((powspf_rx_lsu_param_t*)(arg));
 
-  /* Inicializo cabezal IP */
   unsigned size = sizeof(sr_ethernet_hdr_t);
   sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(rx_lsu_param->packet + size);
   size += sizeof(sr_ip_hdr_t);
@@ -661,7 +692,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     return NULL;
   }
 
-  if (ospf_hdr->rid == g_router_id.s_addr) {
+if (ospf_hdr->rid == g_router_id.s_addr) {
     Debug("-> PWOSPF: LSU Packet dropped, originated by this router\n");
     return NULL;
   }
@@ -677,10 +708,10 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   while (i < lsu_hdr->num_adv) {
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
     router_id.s_addr = ospf_hdr->rid;
+    neighbor_id.s_addr = lsa_hdr->rid;
     subnet.s_addr = lsa_hdr->subnet;
     mask.s_addr = lsa_hdr->mask;
-    neighbor_id.s_addr = lsa_hdr->rid;
-    next_hop.s_addr = ip_hdr->ip_src;
+    next_hop.s_addr = 0;
     
     Debug("-->>--->>>---->>>> \n");
 
@@ -732,19 +763,43 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
   print_topolgy_table (g_topology);
 
+  Debug("-->>--->>> 1\n");
   struct sr_if * elem = rx_lsu_param->sr->if_list;
   while (elem) {
+    Debug("-->>--->>> %s:_\n", elem->name);
     if (elem->neighbor_id != ip_hdr->ip_id) {
+      Debug("-->>--->>> 2.\n");
       uint32_t ipDst = elem->neighbor_ip;
 
+      /* comprobacion de ttl. */
+      if (--lsu_hdr->ttl <= 0) {
+        return NULL;
+      }
+
       /* Construcción del paquete. */
-      uint8_t * packet;
-      unsigned len = construir_packete_lsu (&packet, rx_lsu_param->sr, elem, lsu_hdr->ttl - 1);
-      sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
+      unsigned len_new = 
+        sizeof(sr_ethernet_hdr_t) + 
+        sizeof(sr_ip_hdr_t) + 
+        sizeof(ospfv2_hdr_t) + 
+        sizeof(ospfv2_lsu_hdr_t) + 
+        lsu_hdr->num_adv * sizeof(ospfv2_lsa_t);
+
+      uint8_t * packet_new = (uint8_t *)malloc(len_new);
+      memcpy(packet_new, rx_lsu_param->packet, len_new);
+
+      sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet_new;
+
+      unsigned size_new = sizeof(sr_ethernet_hdr_t);
+      sr_ip_hdr_t * ip_hdr_new = (sr_ip_hdr_t *)(rx_lsu_param->packet + size_new);
+      ip_hdr_new->ip_src = elem->ip;
+      ip_hdr_new->ip_dst = ipDst;
+
+      Debug("-->>--->>> 3.\n");
 
       /* envio del paquete.
        * */
       struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
+      Debug("-->>--->>> 4.\n");
 
       /* Se conoce la MAC. 
        * */
@@ -755,8 +810,8 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
         memcpy(ether_hdr->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
         sr_send_packet (
           rx_lsu_param->sr, 
-          packet, 
-          len, 
+          packet_new, 
+          len_new, 
           elem->name
         );
         
@@ -770,15 +825,15 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
         struct sr_arpreq * req = sr_arpcache_queuereq (
           &(rx_lsu_param->sr->cache), 
           elem->neighbor_ip,
-          packet, 
-          len, 
+          packet_new, 
+          len_new, 
           elem->name
         );
 
         handle_arpreq (rx_lsu_param->sr, req);
       }
 
-      free(packet);
+      free(packet_new);
     }
 
     elem = elem->next;
