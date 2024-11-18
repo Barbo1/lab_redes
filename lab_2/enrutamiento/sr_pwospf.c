@@ -474,7 +474,6 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
 
   ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
 
-  pwospf_lock(sr->ospf_subsys);
   struct sr_rt * elem = sr->routing_table;
   while (elem && (elem->admin_dst <= 1)) {
     lsa_part->subnet = elem->dest.s_addr;
@@ -484,7 +483,6 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
     elem = elem->next;
     lsa_part++;
   }
-  pwospf_unlock(sr->ospf_subsys);
 
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, ospf_size);
   Debug("->-->>--->> 4\n");
@@ -681,7 +679,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   }
 
   int i = 0;
-  while (i < lsu_hdr->num_adv) {
+  while (i++ < lsu_hdr->num_adv) {
     if (ospf_hdr->rid != 0) {
       struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
       router_id.s_addr = ospf_hdr->rid;
@@ -701,7 +699,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       );
     }
 
-    i++;
     lsa_hdr++;
   }
 
@@ -711,14 +708,12 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   params.topology = g_topology;
   params.mutex = g_dijkstra_mutex;
 
-  pwospf_lock(rx_lsu_param->sr->ospf_subsys);
   if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) { 
     perror("pthread_create");
     assert(0);
   } else {
     pthread_detach(g_dijkstra_thread);
   }
-  pwospf_lock(rx_lsu_param->sr->ospf_subsys);
 
   print_topolgy_table (g_topology);
 
