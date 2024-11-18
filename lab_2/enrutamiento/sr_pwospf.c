@@ -485,14 +485,14 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   while (elem && (elem->admin_dst <= 1)) {
     Debug("\nEsta Corresponde a la subnet: ");
     print_addr_ip_int(elem->dest.s_addr);
-    lsa_part->subnet = elem->dest.s_addr;
+    lsa_part->subnet = htonl(elem->dest.s_addr);
 
     Debug("\nEsta Corresponde a la mascara: ");
     print_addr_ip_int(elem->mask.s_addr);
-    lsa_part->mask = elem->mask.s_addr;
+    lsa_part->mask = htonl(elem->mask.s_addr);
 
     Debug("\nEsta es la interfaz: %s", elem->interface);
-    lsa_part->rid = sr_get_interface(sr, elem->interface)->neighbor_id;
+    lsa_part->rid = htonl(sr_get_interface(sr, elem->interface)->neighbor_id);
 
     elem = elem->next;
     lsa_part++;
