@@ -552,12 +552,14 @@ void* send_lsu(void* arg)
 
     /* envio del paquete.
      * */
+    pwospf_lock(lsu_param->sr->ospf_subsys);
     sr_send_packet (
       lsu_param->sr, 
       packet, 
       len, 
       lsu_param->interface->name
     );
+    pwospf_unlock(lsu_param->sr->ospf_subsys);
 
     free(entrada_cache);
 
@@ -715,24 +717,22 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
   int i = 0;
   while (i++ < lsu_hdr->num_adv) {
-    if (ospf_hdr->rid != 0) {
-      struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
-      router_id.s_addr = ospf_hdr->rid;
-      neighbor_id.s_addr = lsa_hdr->rid;
-      subnet.s_addr = lsa_hdr->subnet;
-      mask.s_addr = lsa_hdr->mask;
-      next_hop.s_addr = rx_lsu_param->rx_if->neighbor_ip;
+    struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
+    router_id.s_addr = ospf_hdr->rid;
+    neighbor_id.s_addr = lsa_hdr->rid;
+    subnet.s_addr = lsa_hdr->subnet;
+    mask.s_addr = lsa_hdr->mask;
+    next_hop.s_addr = rx_lsu_param->rx_if->neighbor_ip;
 
-      refresh_topology_entry(
-        g_topology, 
-        router_id,
-        subnet,
-        mask,
-        neighbor_id,
-        next_hop,
-        lsu_hdr->seq
-      );
-    }
+    refresh_topology_entry(
+      g_topology, 
+      router_id,
+      subnet,
+      mask,
+      neighbor_id,
+      next_hop,
+      lsu_hdr->seq
+    );
 
     lsa_hdr++;
   }
@@ -783,12 +783,14 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
         /* envio del paquete.
          * */
+        pwospf_lock(rx_lsu_param->sr->ospf_subsys);
         sr_send_packet (
           rx_lsu_param->sr, 
           packet, 
           len, 
           elem->name
         );
+        pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
         free(entrada_cache);
 
