@@ -242,6 +242,7 @@ void* check_topology_entries_age(void* arg)
   while(1) {
     usleep(1000000);
 
+    pwospf_lock(sr->ospf_subsys);
     if (check_topology_age(g_topology)) {
       dijkstra_param_t params;
       params.sr = sr;
@@ -251,6 +252,8 @@ void* check_topology_entries_age(void* arg)
 
       pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params);
     }
+    pwospf_unlock(sr->ospf_subsys);
+
     print_topolgy_table(g_topology);
     sr_print_routing_table(sr);
   }
@@ -368,12 +371,14 @@ void* send_hello_packet(void* arg) {
 
   /* envio del paquete.
    * */
+  pwospf_lock(hello_param->sr->ospf_subsys);
   sr_send_packet (
     hello_param->sr, 
     packet, 
     len, 
     hello_param->interface->name
   );
+  pwospf_unlock(hello_param->sr->ospf_subsys);
 
   free(packet);
 
@@ -545,12 +550,14 @@ void* send_lsu(void* arg)
 
     /* envio del paquete.
      * */
+    pwospf_lock(lsu_param->sr->ospf_subsys);
     sr_send_packet (
       lsu_param->sr, 
       packet, 
       len, 
       lsu_param->interface->name
     );
+    pwospf_unlock(lsu_param->sr->ospf_subsys);
 
     free(entrada_cache);
 
@@ -737,12 +744,14 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
         /* envio del paquete.
          * */
+        pwospf_lock(rx_lsu_param->sr->ospf_subsys);
         sr_send_packet (
           rx_lsu_param->sr, 
           packet, 
           len, 
           elem->name
         );
+        pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
         free(entrada_cache);
 
