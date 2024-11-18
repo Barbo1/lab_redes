@@ -416,11 +416,11 @@ void* send_all_lsu(void* arg) {
       lsu_param->interface = inter;
       lsu_param->sr = sr;
 
-      if (pthread_create(&g_all_lsu_thread, NULL, send_lsu, lsu_param)) { 
+      if (pthread_create(&g_dijkstra_thread, NULL, send_lsu, lsu_param)) { 
         perror("pthread_create");
         assert(0);
       } else {
-        pthread_detach(g_all_lsu_thread);
+        pthread_detach(g_dijkstra_thread);
       }
     }
 
@@ -615,6 +615,19 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   );
   sr_print_routing_table(sr);
 
+  dijkstra_param_t params;
+  params.sr = sr;
+  params.rid = g_router_id;
+  params.topology = g_topology;
+  params.mutex = g_dijkstra_mutex;
+
+  if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) { 
+    perror("pthread_create");
+    assert(0);
+  } else {
+    pthread_detach(g_dijkstra_thread);
+  }
+
   if (rx_if->neighbor_id == 0) {
     rx_if->neighbor_id = ospf_hdr->rid;
     rx_if->neighbor_ip = ip_hdr->ip_src;
@@ -626,11 +639,11 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
         lsu_param->interface = elem;
         lsu_param->sr = sr;
 
-        if (pthread_create(&g_all_lsu_thread, NULL, send_lsu, lsu_param)) { 
+        if (pthread_create(&g_dijkstra_thread, NULL, send_lsu, lsu_param)) { 
           perror("pthread_create");
           assert(0);
         } else {
-          pthread_detach(g_all_lsu_thread);
+          pthread_detach(g_dijkstra_thread);
         }
       }
       elem = elem->next;
