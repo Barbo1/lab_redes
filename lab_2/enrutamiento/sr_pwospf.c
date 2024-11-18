@@ -501,7 +501,8 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   fprintf(stderr, "\tadv: %d\n", lsu_hdr->num_adv);
  
   lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
-  for (int i = 0; i < lsas; i++) {
+  int i = 0;
+  while (i < lsas) {
     fprintf(stderr, "\tsubnet: ");
     print_addr_ip_int(ntohl(lsa_part->subnet));
     fprintf(stderr, "\tmask: ");
@@ -510,6 +511,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
     print_addr_ip_int(ntohl(lsa_part->rid));
 
     lsa_part++;
+    i++;
   }
 
   return len;
