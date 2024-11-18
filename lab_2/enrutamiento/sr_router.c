@@ -306,22 +306,6 @@ void sr_handle_ip_packet(struct sr_instance *sr,
     return;
   }
 
-  /* el paquete que llego es ospf. */
-  if (ip_headers->ip_p == ip_protocol_ospfv2) {
-    printf("###### -> Its a ospf packet.\n");
-
-    ospfv2_hdr_t * ospf_header = (ospfv2_hdr_t *) (packet + sizeof (sr_ethernet_hdr_t) + sizeof (sr_ip_hdr_t));
-    if (ospf_header->type == OSPF_TYPE_HELLO) {
-      sr_handle_pwospf_packet(
-        sr, 
-        packet, 
-        len, 
-        sr_get_interface(sr, interface)
-      );
-      return;
-    }    
-  }
-
   struct sr_if * mine_interface = sr_get_interface_given_ip(sr, ip_to_packet);
 
   /* El paquete es para una de mis interfaces. */
@@ -366,6 +350,22 @@ void sr_handle_ip_packet(struct sr_instance *sr,
     }
     printf("##### -> Its NOT a recognized packet.\n");
     return; /* discard packet PREGUNTAR */
+  }
+
+  /* el paquete que llego es ospf. */
+  if (ip_headers->ip_p == ip_protocol_ospfv2) {
+    printf("###### -> Its a ospf packet.\n");
+
+    ospfv2_hdr_t * ospf_header = (ospfv2_hdr_t *) (packet + sizeof (sr_ethernet_hdr_t) + sizeof (sr_ip_hdr_t));
+    if (ospf_header->type == OSPF_TYPE_HELLO) {
+      sr_handle_pwospf_packet(
+        sr, 
+        packet, 
+        len, 
+        sr_get_interface(sr, interface)
+      );
+      return;
+    }    
   }
   
   printf("#### -> Niether of my interfaces match.\n");
