@@ -362,7 +362,6 @@ void* send_hello_packet(void* arg) {
   ospf_hdr->aid = 0;
   ospf_hdr->autype = 0;
   ospf_hdr->audata = 0;
-  ospf_hdr->csum = 0;
   ospf_hello_hdr->nmask = hello_param->interface->mask;
   ospf_hello_hdr->padding = 0;
   ospf_hello_hdr->helloint = OSPF_DEFAULT_HELLOINT;
@@ -404,6 +403,13 @@ void* send_all_lsu(void* arg) {
 
   /* while true*/
   while(1) {
+    Debug("\n||||||||||||||||||||||||||||||");
+    Debug("\n||||||||||||||||||||||||||||||");
+    Debug("\n||||||||||||||||||||||||||||||");
+    Debug("\n|||||||||||ENVIO||||||||||||||");
+    Debug("\n||||||||||||||||||||||||||||||");
+    Debug("\n||||||||||||||||||||||||||||||");
+    Debug("\n||||||||||||||||||||||||||||||");
     /* Se ejecuta cada OSPF_DEFAULT_LSUINT segundos */
     usleep(OSPF_DEFAULT_LSUINT * 1000000);
 
@@ -483,15 +489,19 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   Debug("\n------------------------------");
   struct sr_rt * elem = sr->routing_table;
   while (elem && (elem->admin_dst <= 1)) {
-    Debug("\nEsta Corresponde a la subnet: ");
+
+    printf("\n\nEsta Corresponde a este router: ");
+    print_addr_ip_int(g_router_id.s_addr);
+
+    printf("\n\nEsta Corresponde a la subnet: ");
     print_addr_ip_int(elem->dest.s_addr);
     lsa_part->subnet = htonl(elem->dest.s_addr);
 
-    Debug("\nEsta Corresponde a la mascara: ");
+    printf("\n\nEsta Corresponde a la mascara: ");
     print_addr_ip_int(elem->mask.s_addr);
     lsa_part->mask = htonl(elem->mask.s_addr);
 
-    Debug("\nEsta es la interfaz: %s", elem->interface);
+    printf("\n\nEsta es la interfaz: %s", elem->interface);
     lsa_part->rid = htonl(sr_get_interface(sr, elem->interface)->neighbor_id);
 
     elem = elem->next;
