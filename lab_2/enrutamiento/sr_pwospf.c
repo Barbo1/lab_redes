@@ -214,13 +214,15 @@ void* check_neighbors_life(void* arg)
       if (vecinos_muertos) {
         while (vecinos_muertos) {
           struct sr_if * inter = sr->if_list;
-          while (inter->neighbor_id != vecinos_muertos->neighbor_id.s_addr);
-          inter->neighbor_id = 0;
+          while (inter->neighbor_id != vecinos_muertos->neighbor_id.s_addr) {
+            inter = inter->next;
+          }
           inter->helloint = 0;
           inter->neighbor_ip = 0;
           vecinos_muertos = vecinos_muertos->next;
         }
       }
+
       pwospf_unlock(sr->ospf_subsys);
     }
 
@@ -615,25 +617,6 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   struct in_addr res;
   res.s_addr = ospf_hdr->rid;
   refresh_neighbors_alive(g_neighbors, res);
-    
-  struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
-  router_id = g_router_id;
-  neighbor_id.s_addr = ospf_hdr->rid;
-  subnet.s_addr = hello_hdr->nmask & ip_hdr->ip_src;
-  mask.s_addr = hello_hdr->nmask;
-  next_hop.s_addr = ip_hdr->ip_src;
-
-  pwospf_lock(sr->ospf_subsys);
-  refresh_topology_entry(
-    g_topology, 
-    router_id,
-    subnet,
-    mask,
-    neighbor_id,
-    next_hop,
-    g_sequence_num
-  );
-  pwospf_unlock(sr->ospf_subsys);
 
   if (rx_if->neighbor_id == 0) {
     rx_if->neighbor_id = ospf_hdr->rid;
