@@ -179,7 +179,6 @@ void* pwospf_run_thread(void* arg)
     Debug("\n-> PWOSPF: Printing the forwarding table\n");
     sr_print_routing_table(sr);
 
-
     pthread_create(&g_hello_packet_thread, NULL, send_hellos, sr);
     pthread_create(&g_all_lsu_thread, NULL, send_all_lsu, sr);
     pthread_create(&g_neighbors_thread, NULL, check_neighbors_life, sr);
@@ -252,10 +251,11 @@ void* check_topology_entries_age(void* arg)
 
       pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params);
     }
-    pwospf_unlock(sr->ospf_subsys);
 
     print_topolgy_table(g_topology);
     sr_print_routing_table(sr);
+
+    pwospf_unlock(sr->ospf_subsys);
   }
 
   return NULL;
@@ -566,6 +566,7 @@ void* send_lsu(void* arg)
   } else {
     printf("#### -> MAC not found\n");
 
+    pwospf_lock(lsu_param->sr->ospf_subsys);
     struct sr_arpreq * req = sr_arpcache_queuereq (
       &(lsu_param->sr->cache), 
       ipDst,
@@ -574,6 +575,7 @@ void* send_lsu(void* arg)
       lsu_param->interface->name
     );
     handle_arpreq (lsu_param->sr, req);
+    pwospf_unlock(lsu_param->sr->ospf_subsys);
   }
 
   free(packet);
@@ -760,6 +762,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       } else {
         printf("#### -> MAC not found\n");
 
+        pwospf_lock(rx_lsu_param->sr->ospf_subsys);
         struct sr_arpreq * req = sr_arpcache_queuereq (
           &(rx_lsu_param->sr->cache), 
           ipDst,
@@ -768,6 +771,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
           elem->name
         );
         handle_arpreq (rx_lsu_param->sr, req);
+        pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
       }
 
       free(packet);
@@ -775,7 +779,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
     elem = elem->next;
   }
-  sr_print_routing_table(rx_lsu_param->sr);
           
   return NULL;
 } /* -- sr_handle_pwospf_lsu_packet -- */
