@@ -593,11 +593,6 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     return;
   }
   
-  if (rx_if->neighbor_id == 0) {
-    rx_if->neighbor_id = ospf_hdr->rid;
-    rx_if->neighbor_ip = ip_hdr->ip_src;
-  }
-
   struct in_addr res;
   res.s_addr = ospf_hdr->rid;
   refresh_neighbors_alive(g_neighbors, res);
@@ -620,22 +615,28 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   );
   sr_print_routing_table(sr);
 
-  struct sr_if * elem = sr->if_list;
-  while (elem) {
-    if (elem->ip != rx_if->ip) {
-      powspf_hello_lsu_param_t * lsu_param = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
-      lsu_param->interface = elem;
-      lsu_param->sr = sr;
+  if (rx_if->neighbor_id == 0) {
+    rx_if->neighbor_id = ospf_hdr->rid;
+    rx_if->neighbor_ip = ip_hdr->ip_src;
 
-      if (pthread_create(&g_all_lsu_thread, NULL, send_lsu, lsu_param)) { 
-        perror("pthread_create");
-        assert(0);
-      } else {
-        pthread_detach(g_all_lsu_thread);
+    struct sr_if * elem = sr->if_list;
+    while (elem) {
+      if (elem->ip != rx_if->ip) {
+        powspf_hello_lsu_param_t * lsu_param = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
+        lsu_param->interface = elem;
+        lsu_param->sr = sr;
+
+        if (pthread_create(&g_all_lsu_thread, NULL, send_lsu, lsu_param)) { 
+          perror("pthread_create");
+          assert(0);
+        } else {
+          pthread_detach(g_all_lsu_thread);
+        }
       }
+      elem = elem->next;
     }
-    elem = elem->next;
   }
+
   Debug("-> Has finished.\n");
 } /* -- sr_handle_pwospf_hello_packet -- */
 
