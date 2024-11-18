@@ -241,15 +241,13 @@ void* check_topology_entries_age(void* arg)
     usleep(1100000);
 
     if (check_topology_age(g_topology)) {
-      dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
-      params->sr = sr;
-      params->rid = g_router_id;
-      params->topology = g_topology;
-      params->mutex = g_dijkstra_mutex;
+      dijkstra_param_t params;
+      params.sr = sr;
+      params.rid = g_router_id;
+      params.topology = g_topology;
+      params.mutex = g_dijkstra_mutex;
 
       pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params);
-
-      free(params);
     }
     print_topolgy_table(g_topology);
     sr_print_routing_table(sr);
@@ -284,13 +282,12 @@ void* send_hellos(void* arg)
       Debug("\n\n%%%%%%%%%%- Iterating over %s interface: \n", inter->name);
 
       if ((inter->helloint)++ < OSPF_NEIGHBOR_TIMEOUT) {
-        powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
-        params->interface = inter;
-        params->sr = sr;
+        powspf_hello_lsu_param_t params;
+        params.interface = inter;
+        params.sr = sr;
 
-        pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, params);
+        pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, &params);
 
-        free(params);
         inter->helloint = 0;
       }
       inter = inter->next;
@@ -409,13 +406,11 @@ void* send_all_lsu(void* arg) {
 
     struct sr_if * inter = sr->if_list;
     while (inter) {
-      powspf_hello_lsu_param_t * lsu_param = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
-      lsu_param->interface = inter;
-      lsu_param->sr = sr;
+      powspf_hello_lsu_param_t lsu_param;
+      lsu_param.interface = inter;
+      lsu_param.sr = sr;
 
-      pthread_create(&g_lsu_thread, NULL, send_lsu, lsu_param);
-
-      free(lsu_param);
+      pthread_create(&g_lsu_thread, NULL, send_lsu, &lsu_param);
     }
 
     /* Desbloqueo */
@@ -621,12 +616,11 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     struct sr_if * elem = sr->if_list;
     while (elem) {
       if (elem->ip != rx_if->ip) {
-        powspf_hello_lsu_param_t * lsu_param = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
-        lsu_param->interface = elem;
-        lsu_param->sr = sr;
+        powspf_hello_lsu_param_t lsu_param;
+        lsu_param.interface = elem;
+        lsu_param.sr = sr;
 
-        pthread_create(&g_lsu_thread, NULL, send_lsu, lsu_param);
-        free(lsu_param);
+        pthread_create(&g_lsu_thread, NULL, send_lsu, &lsu_param);
       }
       elem = elem->next;
     }
@@ -696,15 +690,13 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     lsa_hdr++;
   }
 
-  dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
-  params->sr = rx_lsu_param->sr;
-  params->rid = g_router_id;
-  params->topology = g_topology;
-  params->mutex = g_dijkstra_mutex;
+  dijkstra_param_t params;
+  params.sr = rx_lsu_param->sr;
+  params.rid = g_router_id;
+  params.topology = g_topology;
+  params.mutex = g_dijkstra_mutex;
 
-  pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, params);
-
-  free(params);
+  pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params);
 
   print_topolgy_table (g_topology);
 
