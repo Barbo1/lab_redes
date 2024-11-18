@@ -492,6 +492,26 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
 
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, ospf_size);
 
+  print_hdr_eth(*packet);
+  print_hdr_ip(*packet + sizeof(sr_ethernet_hdr_t));
+  print_hdr_ospf(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  fprintf(stderr, "LSU header\n");
+  fprintf(stderr, "\tseq: %d\n", lsu_hdr->seq);
+  fprintf(stderr, "\ttype: %d\n", lsu_hdr->seq);
+  fprintf(stderr, "\tadv: %d\n", lsu_hdr->num_adv);
+ 
+  lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
+  for (int i = 0; i < lsas; i++) {
+    fprintf(stderr, "\tsubnet: ");
+    print_addr_ip_int(ntohl(lsa_part->subnet));
+    fprintf(stderr, "\tmask: ");
+    print_addr_ip_int(ntohl(lsa_part->mask));
+    fprintf(stderr, "\trid: ");
+    print_addr_ip_int(ntohl(lsa_part->rid));
+
+    lsa_part++;
+  }
+
   return len;
 }
 
