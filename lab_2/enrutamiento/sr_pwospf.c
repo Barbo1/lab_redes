@@ -205,11 +205,11 @@ void* check_neighbors_life(void* arg)
     struct sr_instance* sr = (struct sr_instance*)arg;
 
     while(1) {
-      usleep(1200000);
-      printf("esto de aca");
+      usleep(1000000);
+
+      pwospf_lock(sr->ospf_subsys);
 
       struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors);
-
       if (vecinos_muertos) {
         while (vecinos_muertos) {
           struct sr_if * inter = sr->if_list;
@@ -220,6 +220,7 @@ void* check_neighbors_life(void* arg)
           vecinos_muertos = vecinos_muertos->next;
         }
       }
+      pwospf_unlock(sr->ospf_subsys);
     }
 
     return NULL;
@@ -239,7 +240,7 @@ void* check_topology_entries_age(void* arg)
   struct sr_instance* sr = (struct sr_instance*)arg;
 
   while(1) {
-    usleep(1100000);
+    usleep(1000000);
 
     if (check_topology_age(g_topology)) {
       dijkstra_param_t params;
@@ -403,7 +404,6 @@ void* send_all_lsu(void* arg) {
     /* Se ejecuta cada OSPF_DEFAULT_LSUINT segundos */
     usleep(OSPF_DEFAULT_LSUINT * 1000000);
 
-    /* Bloqueo para evitar mezclar el envío de HELLOs y LSUs */
     pwospf_lock(sr->ospf_subsys);
 
     struct sr_if * inter = sr->if_list;
@@ -465,6 +465,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
 
   ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
 
+  pwospf_lock(sr->ospf_subsys);
   struct sr_rt * elem = sr->routing_table;
   while (elem && (elem->admin_dst <= 1)) {
     lsa_part->subnet = elem->dest.s_addr;
@@ -474,6 +475,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
     elem = elem->next;
     lsa_part++;
   }
+  pwospf_unlock(sr->ospf_subsys);
 
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, ospf_size);
 
@@ -543,14 +545,12 @@ void* send_lsu(void* arg)
 
     /* envio del paquete.
      * */
-    pwospf_lock(lsu_param->sr->ospf_subsys);
     sr_send_packet (
       lsu_param->sr, 
       packet, 
       len, 
       lsu_param->interface->name
     );
-    pwospf_unlock(lsu_param->sr->ospf_subsys);
 
     free(entrada_cache);
 
@@ -679,6 +679,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     mask.s_addr = lsa_hdr->mask;
     next_hop.s_addr = rx_lsu_param->rx_if->neighbor_ip;
 
+    pwospf_lock(rx_lsu_param->sr->ospf_subsys);
     refresh_topology_entry(
       g_topology, 
       router_id,
@@ -688,10 +689,12 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       next_hop,
       lsu_hdr->seq
     );
+    pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
     lsa_hdr++;
   }
 
+  pwospf_lock(rx_lsu_param->sr->ospf_subsys);
   dijkstra_param_t params;
   params.sr = rx_lsu_param->sr;
   params.rid = g_router_id;
@@ -699,6 +702,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   params.mutex = g_dijkstra_mutex;
 
   pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params);
+  pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
   print_topolgy_table (g_topology);
 
@@ -733,14 +737,12 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
         /* envio del paquete.
          * */
-        pwospf_lock(rx_lsu_param->sr->ospf_subsys);
         sr_send_packet (
           rx_lsu_param->sr, 
           packet, 
           len, 
           elem->name
         );
-        pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
         free(entrada_cache);
 
