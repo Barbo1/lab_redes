@@ -29,14 +29,12 @@
 
 /*pthread_t hello_thread;*/
 pthread_t g_hello_packet_thread;
-pthread_t g_hello_packet_thread_1;
 pthread_t g_all_lsu_thread;
 pthread_t g_lsu_thread;
 pthread_t g_neighbors_thread;
 pthread_t g_topology_entries_thread;
 pthread_t g_rx_lsu_thread;
 pthread_t g_dijkstra_thread;
-pthread_t g_dijkstra_thread_1;
 
 pthread_mutex_t g_dijkstra_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -278,35 +276,25 @@ void* send_hellos(void* arg)
 {
   struct sr_instance* sr = (struct sr_instance*)arg;
 
-  /* While true */
   while(1) {
-    /* Se ejecuta cada 1 segundo */
     usleep(1000000);
-    printf("esto otro de aca");
 
-    /* Bloqueo para evitar mezclar el envío de HELLOs y LSUs */
     pwospf_lock(sr->ospf_subsys);
 
     struct sr_if * inter = sr->if_list;
     while (inter) {
-      Debug("\n\n%%%%%%%%%%- Iterating over %s interface: \n", inter->name);
-
       if ((inter->helloint)++ < OSPF_NEIGHBOR_TIMEOUT) {
         powspf_hello_lsu_param_t params;
         params.interface = inter;
         params.sr = sr;
 
-        pthread_create(&g_hello_packet_thread_1, NULL, send_hello_packet, &params);
+        pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, &params);
 
         inter->helloint = 0;
       }
       inter = inter->next;
     }
-    /* Chequeo todas las interfaces para enviar el paquete HELLO */
-    /* Cada interfaz matiene un contador en segundos para los HELLO*/
-    /* Reiniciar el contador de segundos para HELLO */
 
-    /* Desbloqueo */
     pwospf_unlock(sr->ospf_subsys);
   };
 
@@ -402,7 +390,6 @@ void* send_all_lsu(void* arg) {
   /* while true*/
   while(1) {
 
-    /* Se ejecuta cada OSPF_DEFAULT_LSUINT segundos */
     usleep(OSPF_DEFAULT_LSUINT * 1000000);
 
     pwospf_lock(sr->ospf_subsys);
@@ -418,7 +405,6 @@ void* send_all_lsu(void* arg) {
       inter = inter->next;
     }
 
-    /* Desbloqueo */
     pwospf_unlock(sr->ospf_subsys);
   };
 
@@ -708,10 +694,8 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   params.topology = g_topology;
   params.mutex = g_dijkstra_mutex;
 
-  pthread_create(&g_dijkstra_thread_1, NULL, run_dijkstra, &params);
+  pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params);
   pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
-
-  print_topolgy_table (g_topology);
 
   struct sr_if * elem = rx_lsu_param->sr->if_list;
   while (elem) {
