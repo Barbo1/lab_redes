@@ -323,8 +323,6 @@ void* send_hellos(void* arg)
 void* send_hello_packet(void* arg) {
   powspf_hello_lsu_param_t* hello_param = ((powspf_hello_lsu_param_t*)(arg));
 
-  Debug("\n\nPWOSPF: Constructing HELLO packet for interface %s: \n", hello_param->interface->name);
-
   unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t);
   uint8_t * packet = (uint8_t *)malloc(len * sizeof(uint8_t));
 
@@ -401,13 +399,7 @@ void* send_all_lsu(void* arg) {
 
   /* while true*/
   while(1) {
-    Debug("\n||||||||||||||||||||||||||||||");
-    Debug("\n||||||||||||||||||||||||||||||");
-    Debug("\n||||||||||||||||||||||||||||||");
-    Debug("\n|||||||||||ENVIO||||||||||||||");
-    Debug("\n||||||||||||||||||||||||||||||");
-    Debug("\n||||||||||||||||||||||||||||||");
-    Debug("\n||||||||||||||||||||||||||||||");
+
     /* Se ejecuta cada OSPF_DEFAULT_LSUINT segundos */
     usleep(OSPF_DEFAULT_LSUINT * 1000000);
 
@@ -420,6 +412,8 @@ void* send_all_lsu(void* arg) {
       lsu_param.sr = sr;
 
       pthread_create(&g_lsu_thread, NULL, send_lsu, &lsu_param);
+
+      inter = inter->next;
     }
 
     /* Desbloqueo */
@@ -621,6 +615,25 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   struct in_addr res;
   res.s_addr = ospf_hdr->rid;
   refresh_neighbors_alive(g_neighbors, res);
+    
+  struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
+  router_id = g_router_id;
+  neighbor_id.s_addr = ospf_hdr->rid;
+  subnet.s_addr = hello_hdr->nmask & ip_hdr->ip_src;
+  mask.s_addr = hello_hdr->nmask;
+  next_hop.s_addr = ip_hdr->ip_src;
+
+  pwospf_lock(sr->ospf_subsys);
+  refresh_topology_entry(
+    g_topology, 
+    router_id,
+    subnet,
+    mask,
+    neighbor_id,
+    next_hop,
+    g_sequence_num
+  );
+  pwospf_unlock(sr->ospf_subsys);
 
   if (rx_if->neighbor_id == 0) {
     rx_if->neighbor_id = ospf_hdr->rid;
