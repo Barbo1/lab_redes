@@ -702,7 +702,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     }
 
     i++;
-    lsa_hdr += sizeof(ospfv2_lsa_t);
+    lsa_hdr++;
   }
 
   dijkstra_param_t params;
