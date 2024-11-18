@@ -205,7 +205,7 @@ void* check_neighbors_life(void* arg)
     struct sr_instance* sr = (struct sr_instance*)arg;
 
     while(1) {
-      usleep(1000000);
+      usleep(1200000);
 
       struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors);
 
@@ -238,7 +238,7 @@ void* check_topology_entries_age(void* arg)
   struct sr_instance* sr = (struct sr_instance*)arg;
 
   while(1) {
-    usleep(1000000);
+    usleep(1100000);
 
     if (check_topology_age(g_topology)) {
       dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
@@ -247,7 +247,6 @@ void* check_topology_entries_age(void* arg)
       params->topology = g_topology;
       params->mutex = g_dijkstra_mutex;
 
-      pwospf_lock(sr->ospf_subsys);
 
       if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) { 
         perror("pthread_create");
@@ -255,8 +254,6 @@ void* check_topology_entries_age(void* arg)
       } else {
         pthread_detach(g_dijkstra_thread);
       }
-      
-      pwospf_lock(sr->ospf_subsys);
     }
     print_topolgy_table(g_topology);
     sr_print_routing_table(sr);
@@ -422,11 +419,11 @@ void* send_all_lsu(void* arg) {
       lsu_param->interface = inter;
       lsu_param->sr = sr;
 
-      if (pthread_create(&g_dijkstra_thread, NULL, send_lsu, lsu_param)) { 
+      if (pthread_create(&g_lsu_thread, NULL, send_lsu, lsu_param)) { 
         perror("pthread_create");
         assert(0);
       } else {
-        pthread_detach(g_dijkstra_thread);
+        pthread_detach(g_lsu_thread);
       }
     }
 
@@ -668,11 +665,11 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
         lsu_param->interface = elem;
         lsu_param->sr = sr;
 
-        if (pthread_create(&g_dijkstra_thread, NULL, send_lsu, lsu_param)) { 
+        if (pthread_create(&g_lsu_thread, NULL, send_lsu, lsu_param)) { 
           perror("pthread_create");
           assert(0);
         } else {
-          pthread_detach(g_dijkstra_thread);
+          pthread_detach(g_lsu_thread);
         }
       }
       elem = elem->next;
