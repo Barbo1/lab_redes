@@ -206,6 +206,7 @@ void* check_neighbors_life(void* arg)
 
     while(1) {
       usleep(1200000);
+      printf("esto de aca");
 
       struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors);
 
@@ -273,6 +274,7 @@ void* send_hellos(void* arg)
   while(1) {
     /* Se ejecuta cada 1 segundo */
     usleep(1000000);
+    printf("esto otro de aca");
 
     /* Bloqueo para evitar mezclar el envío de HELLOs y LSUs */
     pwospf_lock(sr->ospf_subsys);
