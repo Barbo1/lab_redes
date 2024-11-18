@@ -432,14 +432,7 @@ void* send_all_lsu(void* arg) {
 } /* -- send_all_lsu -- */
 
 unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struct sr_if* interface, uint8_t ttl) {
-  pwospf_lock(sr->ospf_subsys);
-  unsigned lsas = 0;
-  struct sr_rt * elem = sr->routing_table;
-  while (elem) {
-    lsas++;
-    elem = elem->next;
-  }
-  pwospf_unlock(sr->ospf_subsys);
+  unsigned lsas = count_routes(sr);
 
   unsigned ospf_size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
   unsigned len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + ospf_size;
@@ -482,14 +475,14 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
 
   pwospf_lock(sr->ospf_subsys);
-  elem = sr->routing_table;
-  while (elem && (elem->admin_dst == 0 || elem->admin_dst == 1)) {
+  struct sr_rt * elem = sr->routing_table;
+  while (elem && (elem->admin_dst <= 1)) {
     lsa_part->subnet = elem->dest.s_addr;
     lsa_part->mask = elem->mask.s_addr;
     lsa_part->rid = sr_get_interface(sr, elem->interface)->neighbor_id;
 
     elem = elem->next;
-    lsa_part += sizeof(ospfv2_lsa_t);
+    lsa_part++;
   }
   pwospf_unlock(sr->ospf_subsys);
 
@@ -631,7 +624,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
 
   struct sr_if * elem = sr->if_list;
   while (elem) {
-    if (elem->ip != rx_if->ip && elem->neighbor_id != 0) {
+    if (elem->ip != rx_if->ip) {
       powspf_hello_lsu_param_t * lsu_param = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
       lsu_param->interface = elem;
       lsu_param->sr = sr;
@@ -675,7 +668,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     return NULL;
   }
 
-if (ospf_hdr->rid == g_router_id.s_addr) {
+  if (ospf_hdr->rid == g_router_id.s_addr) {
     Debug("-> PWOSPF: LSU Packet dropped, originated by this router\n");
     return NULL;
   }
