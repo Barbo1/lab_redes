@@ -29,12 +29,14 @@
 
 /*pthread_t hello_thread;*/
 pthread_t g_hello_packet_thread;
+pthread_t g_hello_packet_thread_1;
 pthread_t g_all_lsu_thread;
 pthread_t g_lsu_thread;
 pthread_t g_neighbors_thread;
 pthread_t g_topology_entries_thread;
 pthread_t g_rx_lsu_thread;
 pthread_t g_dijkstra_thread;
+pthread_t g_dijkstra_thread_1;
 
 pthread_mutex_t g_dijkstra_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -292,7 +294,7 @@ void* send_hellos(void* arg)
         params.interface = inter;
         params.sr = sr;
 
-        pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, &params);
+        pthread_create(&g_hello_packet_thread_1, NULL, send_hello_packet, &params);
 
         inter->helloint = 0;
       }
@@ -631,7 +633,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
         lsu_param.interface = elem;
         lsu_param.sr = sr;
 
-        pthread_create(&g_lsu_thread, NULL, send_lsu, &lsu_param);
+        pthread_create(&g_rx_lsu_thread, NULL, send_lsu, &lsu_param);
       }
       elem = elem->next;
     }
@@ -710,7 +712,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   params.topology = g_topology;
   params.mutex = g_dijkstra_mutex;
 
-  pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params);
+  pthread_create(&g_dijkstra_thread_1, NULL, run_dijkstra, &params);
   pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
   print_topolgy_table (g_topology);
