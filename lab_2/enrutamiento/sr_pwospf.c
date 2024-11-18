@@ -615,13 +615,13 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   );
   sr_print_routing_table(sr);
 
-  dijkstra_param_t params;
-  params.sr = sr;
-  params.rid = g_router_id;
-  params.topology = g_topology;
-  params.mutex = g_dijkstra_mutex;
+  dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
+  params->sr = sr;
+  params->rid = g_router_id;
+  params->topology = g_topology;
+  params->mutex = g_dijkstra_mutex;
 
-  if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) { 
+  if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, params)) { 
     perror("pthread_create");
     assert(0);
   } else {
@@ -716,13 +716,13 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     lsa_hdr++;
   }
 
-  dijkstra_param_t params;
-  params.sr = rx_lsu_param->sr;
-  params.rid.s_addr = ospf_hdr->rid;
-  params.topology = g_topology;
-  params.mutex = g_dijkstra_mutex;
+  dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
+  params->sr = rx_lsu_param->sr;
+  params->rid = g_router_id;
+  params->topology = g_topology;
+  params->mutex = g_dijkstra_mutex;
 
-  if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) { 
+  if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, params)) { 
     perror("pthread_create");
     assert(0);
   } else {
