@@ -247,7 +247,6 @@ void* check_topology_entries_age(void* arg)
       params->topology = g_topology;
       params->mutex = g_dijkstra_mutex;
 
-
       if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) { 
         perror("pthread_create");
         assert(0);
@@ -640,19 +639,6 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     g_sequence_num
   );
   sr_print_routing_table(sr);
-
-  dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
-  params->sr = sr;
-  params->rid = g_router_id;
-  params->topology = g_topology;
-  params->mutex = g_dijkstra_mutex;
-
-  if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, params)) { 
-    perror("pthread_create");
-    assert(0);
-  } else {
-    pthread_detach(g_dijkstra_thread);
-  }
 
   if (rx_if->neighbor_id == 0) {
     rx_if->neighbor_id = ospf_hdr->rid;
