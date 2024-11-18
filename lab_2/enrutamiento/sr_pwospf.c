@@ -480,43 +480,17 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
 
   ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
 
-  Debug("\n------------------------------");
-  Debug("\n------------------------------");
-  Debug("\n------------------------------");
-  Debug("\n------------------------------");
-  Debug("\n------------------------------");
-  Debug("\n------------------------------");
-  Debug("\n------------------------------");
   struct sr_rt * elem = sr->routing_table;
   while (elem && (elem->admin_dst <= 1)) {
-
-    printf("\n\nEsta Corresponde a este router: ");
-    print_addr_ip_int(g_router_id.s_addr);
-
-    printf("\n\nEsta Corresponde a la subnet: ");
-    print_addr_ip_int(elem->dest.s_addr);
-    lsa_part->subnet = htonl(elem->dest.s_addr);
-
-    printf("\n\nEsta Corresponde a la mascara: ");
-    print_addr_ip_int(elem->mask.s_addr);
-    lsa_part->mask = htonl(elem->mask.s_addr);
-
-    printf("\n\nEsta es la interfaz: %s", elem->interface);
-    lsa_part->rid = htonl(sr_get_interface(sr, elem->interface)->neighbor_id);
+    lsa_part->subnet = elem->dest.s_addr;
+    lsa_part->mask = elem->mask.s_addr;
+    lsa_part->rid = sr_get_interface(sr, elem->interface)->neighbor_id;
 
     elem = elem->next;
     lsa_part++;
   }
-  Debug("\n------------------------------");
-  Debug("\n------------------------------");
-  Debug("\n------------------------------");
-  Debug("\n------------------------------");
-  Debug("\n------------------------------");
-  Debug("\n------------------------------");
-  Debug("\n------------------------------");
 
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, ospf_size);
-  Debug("->-->>--->> 4\n");
 
   return len;
 }
