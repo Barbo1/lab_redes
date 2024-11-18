@@ -493,7 +493,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   print_hdr_ospf(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
   fprintf(stderr, "LSU header\n");
   fprintf(stderr, "\tseq: %d\n", lsu_hdr->seq);
-  fprintf(stderr, "\ttype: %d\n", lsu_hdr->seq);
+  fprintf(stderr, "\tttl: %d\n", lsu_hdr->ttl);
   fprintf(stderr, "\tadv: %d\n", lsu_hdr->num_adv);
  
   lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
@@ -621,24 +621,6 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   struct in_addr res;
   res.s_addr = ospf_hdr->rid;
   refresh_neighbors_alive(g_neighbors, res);
-
-  struct in_addr rid, net, mask, nid, nip;
-  rid.s_addr = ospf_hdr->rid;
-  net.s_addr = ip_hdr->ip_src & hello_hdr->nmask;
-  mask.s_addr = hello_hdr->nmask;
-  nid.s_addr = rx_if->neighbor_id;
-  nip.s_addr = rx_if->neighbor_ip;
-
-  refresh_topology_entry(
-    g_topology, 
-    rid, 
-    net, 
-    mask,
-    nid, 
-    nip, 
-    g_sequence_num
-  );
-  sr_print_routing_table(sr);
 
   if (rx_if->neighbor_id == 0) {
     rx_if->neighbor_id = ospf_hdr->rid;
