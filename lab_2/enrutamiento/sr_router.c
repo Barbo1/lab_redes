@@ -63,7 +63,6 @@ void sr_init(struct sr_instance* sr)
 
 } /* -- sr_init -- */
 
-
 struct sr_rt * find_st_entry (struct sr_instance *sr, uint32_t ipDst) {
   struct sr_rt * first = sr->routing_table;
   struct sr_rt * better = 0;
@@ -72,7 +71,7 @@ struct sr_rt * find_st_entry (struct sr_instance *sr, uint32_t ipDst) {
   while (first) {
     uint32_t masked_ip = ipDst & first->mask.s_addr;
     uint32_t matched_bits = ~(masked_ip ^ first->dest.s_addr);
-    if (0 < matched_bits && matched_bits > better_matched_bits) {
+    if (matched_bits > better_matched_bits) {
       better = first;
       better_matched_bits = matched_bits;
     }
@@ -370,6 +369,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   
   printf("#### -> Niether of my interfaces match.\n");
 
+  pthread_mutex_lock(&sr->ospf_subsys->lock);
   struct sr_rt * matched_rt = find_st_entry (sr, ip_to_packet);
 
   /* No pertenece a la routing table. */
@@ -441,6 +441,8 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   }
 
   free(new_packet);
+  pthread_mutex_unlock(&sr->ospf_subsys->lock);
+
   return;
 }
 

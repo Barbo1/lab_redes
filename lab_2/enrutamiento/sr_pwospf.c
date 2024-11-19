@@ -723,14 +723,12 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
         /* envio del paquete.
          * */
-        pwospf_lock(rx_lsu_param->sr->ospf_subsys);
         sr_send_packet (
           rx_lsu_param->sr, 
           packet, 
           len, 
           elem->name
         );
-        pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
         free(entrada_cache);
 
@@ -739,7 +737,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       } else {
         printf("#### -> MAC not found\n");
 
-        pwospf_lock(rx_lsu_param->sr->ospf_subsys);
         struct sr_arpreq * req = sr_arpcache_queuereq (
           &(rx_lsu_param->sr->cache), 
           ipDst,
@@ -748,7 +745,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
           elem->name
         );
         handle_arpreq (rx_lsu_param->sr, req);
-        pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
       }
 
       free(packet);
