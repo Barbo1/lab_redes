@@ -244,6 +244,7 @@ void* check_topology_entries_age(void* arg)
     usleep(1000000);
 
     pwospf_lock(sr->ospf_subsys);
+
     if (check_topology_age(g_topology)) {
       dijkstra_param_t params;
       params.sr = sr;
@@ -361,14 +362,12 @@ void* send_hello_packet(void* arg) {
 
   /* envio del paquete.
    * */
-  pwospf_lock(hello_param->sr->ospf_subsys);
   sr_send_packet (
     hello_param->sr, 
     packet, 
     len, 
     hello_param->interface->name
   );
-  pwospf_unlock(hello_param->sr->ospf_subsys);
 
   free(packet);
 
@@ -454,7 +453,6 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
 
   ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
 
-  pwospf_lock(sr->ospf_subsys);
   struct sr_rt * elem = sr->routing_table;
   while (elem && (elem->admin_dst <= 1)) {
     lsa_part->subnet = elem->dest.s_addr;
@@ -464,7 +462,6 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
     elem = elem->next;
     lsa_part++;
   }
-  pwospf_unlock(sr->ospf_subsys);
 
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, ospf_size);
 
@@ -534,14 +531,12 @@ void* send_lsu(void* arg)
 
     /* envio del paquete.
      * */
-    pwospf_lock(lsu_param->sr->ospf_subsys);
     sr_send_packet (
       lsu_param->sr, 
       packet, 
       len, 
       lsu_param->interface->name
     );
-    pwospf_unlock(lsu_param->sr->ospf_subsys);
 
     free(entrada_cache);
 
@@ -550,7 +545,6 @@ void* send_lsu(void* arg)
   } else {
     printf("#### -> MAC not found\n");
 
-    pwospf_lock(lsu_param->sr->ospf_subsys);
     struct sr_arpreq * req = sr_arpcache_queuereq (
       &(lsu_param->sr->cache), 
       ipDst,
@@ -559,7 +553,6 @@ void* send_lsu(void* arg)
       lsu_param->interface->name
     );
     handle_arpreq (lsu_param->sr, req);
-    pwospf_unlock(lsu_param->sr->ospf_subsys);
   }
 
   free(packet);
@@ -615,7 +608,9 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
         lsu_param.interface = elem;
         lsu_param.sr = sr;
 
+        pwospf_lock(sr->ospf_subsys);
         pthread_create(&g_rx_lsu_thread, NULL, send_lsu, &lsu_param);
+        pwospf_unlock(sr->ospf_subsys);
       }
       elem = elem->next;
     }
