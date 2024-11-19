@@ -59,40 +59,41 @@ static void* pwospf_run_thread(void* arg);
 
 int pwospf_init(struct sr_instance* sr)
 {
-    assert(sr);
+  assert(sr);
 
-    sr->ospf_subsys = (struct pwospf_subsys*)malloc(sizeof(struct
-                                                      pwospf_subsys));
+  sr->ospf_subsys = (struct pwospf_subsys*)malloc(sizeof(struct
+        pwospf_subsys));
 
-    assert(sr->ospf_subsys);
-    pthread_mutex_init(&(sr->ospf_subsys->lock), 0);
+  assert(sr->ospf_subsys);
+  pthread_mutex_init(&(sr->ospf_subsys->lock), 0);
 
-    g_router_id.s_addr = 0;
+  g_router_id.s_addr = 0;
 
-    /* Defino la MAC de multicast a usar para los paquetes HELLO */
-    g_ospf_multicast_mac[0] = 0x01;
-    g_ospf_multicast_mac[1] = 0x00;
-    g_ospf_multicast_mac[2] = 0x5e;
-    g_ospf_multicast_mac[3] = 0x00;
-    g_ospf_multicast_mac[4] = 0x00;
-    g_ospf_multicast_mac[5] = 0x05;
+  /* Defino la MAC de multicast a usar para los paquetes HELLO */
+  g_ospf_multicast_mac[0] = 0x01;
+  g_ospf_multicast_mac[1] = 0x00;
+  g_ospf_multicast_mac[2] = 0x5e;
+  g_ospf_multicast_mac[3] = 0x00;
+  g_ospf_multicast_mac[4] = 0x00;
+  g_ospf_multicast_mac[5] = 0x05;
 
-    g_neighbors = NULL;
+  g_neighbors = NULL;
 
-    g_sequence_num = 0;
+  g_sequence_num = 0;
 
-    struct in_addr zero;
-    zero.s_addr = 0;
-    g_neighbors = create_ospfv2_neighbor(zero);
-    g_topology = create_ospfv2_topology_entry(zero, zero, zero, zero, zero, 0);
 
-    /* -- start thread subsystem -- */
-    if( pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) { 
-        perror("pthread_create");
-        assert(0);
-    }
+  struct in_addr zero;
+  zero.s_addr = 0;
+  g_neighbors = create_ospfv2_neighbor(zero);
+  g_topology = create_ospfv2_topology_entry(zero, zero, zero, zero, zero, 0);
 
-    return 0; /* success */
+  /* -- start thread subsystem -- */
+  if( pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) { 
+    perror("pthread_create");
+    assert(0);
+  }
+
+  return 0; /* success */
 } /* -- pwospf_init -- */
 
 
@@ -105,8 +106,8 @@ int pwospf_init(struct sr_instance* sr)
 
 void pwospf_lock(struct pwospf_subsys* subsys)
 {
-    if ( pthread_mutex_lock(&subsys->lock) )
-    { assert(0); }
+  if ( pthread_mutex_lock(&subsys->lock) )
+  { assert(0); }
 }
 
 /*---------------------------------------------------------------------
@@ -118,8 +119,8 @@ void pwospf_lock(struct pwospf_subsys* subsys)
 
 void pwospf_unlock(struct pwospf_subsys* subsys)
 {
-    if ( pthread_mutex_unlock(&subsys->lock) )
-    { assert(0); }
+  if ( pthread_mutex_unlock(&subsys->lock) )
+  { assert(0); }
 } 
 
 /*---------------------------------------------------------------------
@@ -130,61 +131,61 @@ void pwospf_unlock(struct pwospf_subsys* subsys)
  *---------------------------------------------------------------------*/
 
 static
-void* pwospf_run_thread(void* arg)
-{
-    sleep(5);
+void* pwospf_run_thread(void* arg) {
+  sleep(5);
 
-    struct sr_instance* sr = (struct sr_instance*)arg;
+  struct sr_instance* sr = (struct sr_instance*)arg;
 
-    /* Set the ID of the router */
-    while(g_router_id.s_addr == 0)
-    {
-        struct sr_if* int_temp = sr->if_list;
-        while(int_temp != NULL)
-        {
-            if (int_temp->ip > g_router_id.s_addr)
-            {
-                g_router_id.s_addr = int_temp->ip;
-            }
-
-            int_temp = int_temp->next;
-        }
-    }
-    Debug("\n\nPWOSPF: Selecting the highest IP address on a router as the router ID\n");
-    Debug("-> PWOSPF: The router ID is [%s]\n", inet_ntoa(g_router_id));
-
-
-    Debug("\nPWOSPF: Detecting the router interfaces and adding their networks to the routing table\n");
+  /* Set the ID of the router */
+  while(g_router_id.s_addr == 0)
+  {
     struct sr_if* int_temp = sr->if_list;
     while(int_temp != NULL)
     {
-        struct in_addr ip;
-        ip.s_addr = int_temp->ip;
-        struct in_addr gw;
-        gw.s_addr = 0x00000000;
-        struct in_addr mask;
-        mask.s_addr =  int_temp->mask;
-        struct in_addr network;
-        network.s_addr = ip.s_addr & mask.s_addr;
+      if (int_temp->ip > g_router_id.s_addr)
+      {
+        g_router_id.s_addr = int_temp->ip;
+      }
 
-        if (check_route(sr, network) == 0)
-        {
-            Debug("-> PWOSPF: Adding the directly connected network [%s, ", inet_ntoa(network));
-            Debug("%s] to the routing table\n", inet_ntoa(mask));
-            sr_add_rt_entry(sr, network, gw, mask, int_temp->name, 1);
-        }
-        int_temp = int_temp->next;
+      int_temp = int_temp->next;
     }
-    
-    Debug("\n-> PWOSPF: Printing the forwarding table\n");
-    sr_print_routing_table(sr);
+  }
+  Debug("\n\nPWOSPF: Selecting the highest IP address on a router as the router ID\n");
+  Debug("-> PWOSPF: The router ID is [%s]\n", inet_ntoa(g_router_id));
 
-    pthread_create(&g_hello_packet_thread, NULL, send_hellos, sr);
-    pthread_create(&g_all_lsu_thread, NULL, send_all_lsu, sr);
-    pthread_create(&g_neighbors_thread, NULL, check_neighbors_life, sr);
-    pthread_create(&g_topology_entries_thread, NULL, check_topology_entries_age, sr);
 
-    return NULL;
+  Debug("\nPWOSPF: Detecting the router interfaces and adding their networks to the routing table\n");
+  struct sr_if* int_temp = sr->if_list;
+  while(int_temp != NULL)
+  {
+    struct in_addr ip;
+    ip.s_addr = int_temp->ip;
+    struct in_addr gw;
+    gw.s_addr = 0x00000000;
+    struct in_addr mask;
+    mask.s_addr =  int_temp->mask;
+    struct in_addr network;
+    network.s_addr = ip.s_addr & mask.s_addr;
+
+    if (check_route(sr, network) == 0)
+    {
+      Debug("-> PWOSPF: Adding the directly connected network [%s, ", inet_ntoa(network));
+      Debug("%s] to the routing table\n", inet_ntoa(mask));
+      sr_add_rt_entry(sr, network, gw, mask, int_temp->name, 1);
+    }
+    int_temp = int_temp->next;
+  }
+
+  Debug("\n-> PWOSPF: Printing the forwarding table\n");
+  sr_print_routing_table(sr);
+
+
+  pthread_create(&g_hello_packet_thread, NULL, send_hellos, sr);
+  pthread_create(&g_all_lsu_thread, NULL, send_all_lsu, sr);
+  pthread_create(&g_neighbors_thread, NULL, check_neighbors_life, sr);
+  pthread_create(&g_topology_entries_thread, NULL, check_topology_entries_age, sr);
+
+  return NULL;
 } /* -- run_ospf_thread -- */
 
 /***********************************************************************************
@@ -199,32 +200,31 @@ void* pwospf_run_thread(void* arg)
  *
  *---------------------------------------------------------------------*/
 
-void* check_neighbors_life(void* arg)
-{
-    struct sr_instance* sr = (struct sr_instance*)arg;
+void* check_neighbors_life(void* arg) {
+  struct sr_instance* sr = (struct sr_instance*)arg;
 
-    while(1) {
-      usleep(1000000);
+  while(1) {
+    usleep(1000000);
 
-      pwospf_lock(sr->ospf_subsys);
+    pwospf_lock(sr->ospf_subsys);
 
-      struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors);
-      if (vecinos_muertos) {
-        while (vecinos_muertos) {
-          struct sr_if * inter = sr->if_list;
-          while (inter->neighbor_id != vecinos_muertos->neighbor_id.s_addr) {
-            inter = inter->next;
-          }
-          inter->helloint = 0;
-          inter->neighbor_ip = 0;
-          vecinos_muertos = vecinos_muertos->next;
+    struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors);
+    if (vecinos_muertos) {
+      while (vecinos_muertos) {
+        struct sr_if * inter = sr->if_list;
+        while (inter->neighbor_id != vecinos_muertos->neighbor_id.s_addr) {
+          inter = inter->next;
         }
+        inter->helloint = 0;
+        inter->neighbor_ip = 0;
+        vecinos_muertos = vecinos_muertos->next;
       }
-
-      pwospf_unlock(sr->ospf_subsys);
     }
 
-    return NULL;
+    pwospf_unlock(sr->ospf_subsys);
+  }
+
+  return NULL;
 } /* -- check_neighbors_life -- */
 
 
@@ -236,8 +236,7 @@ void* check_neighbors_life(void* arg)
  *
  *---------------------------------------------------------------------*/
 
-void* check_topology_entries_age(void* arg)
-{
+void* check_topology_entries_age(void* arg) {
   struct sr_instance* sr = (struct sr_instance*)arg;
 
   while(1) {
@@ -273,8 +272,7 @@ void* check_topology_entries_age(void* arg)
  *
  *---------------------------------------------------------------------*/
 
-void* send_hellos(void* arg)
-{
+void* send_hellos(void* arg) {
   struct sr_instance* sr = (struct sr_instance*)arg;
 
   while(1) {
@@ -363,11 +361,11 @@ void* send_hello_packet(void* arg) {
   /* envio del paquete.
    * */
   sr_send_packet (
-    hello_param->sr, 
-    packet, 
-    len, 
-    hello_param->interface->name
-  );
+      hello_param->sr, 
+      packet, 
+      len, 
+      hello_param->interface->name
+      );
 
   free(packet);
 
@@ -409,6 +407,13 @@ void* send_all_lsu(void* arg) {
 
   return NULL;
 } /* -- send_all_lsu -- */
+
+/*---------------------------------------------------------------------
+ * Method: send_lsu
+ *
+ * Construye y envía paquetes LSU a través de una interfaz específica
+ *
+ *---------------------------------------------------------------------*/
 
 unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struct sr_if* interface, uint8_t ttl) {
   unsigned lsas = count_routes(sr);
@@ -472,7 +477,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   fprintf(stderr, "\tseq: %d\n", lsu_hdr->seq);
   fprintf(stderr, "\tttl: %d\n", lsu_hdr->ttl);
   fprintf(stderr, "\tadv: %d\n", lsu_hdr->num_adv);
- 
+
   lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
   int i = 0;
   while (i < lsas) {
@@ -514,7 +519,7 @@ void* send_lsu(void* arg)
   uint8_t * packet;
   unsigned len = construir_packete_lsu (&packet, lsu_param->sr, lsu_param->interface, 64);
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
-  
+
   Debug("\n\nPWOSPF: LSU packet constructed\n");
 
   /* envio del paquete.
@@ -532,34 +537,35 @@ void* send_lsu(void* arg)
     /* envio del paquete.
      * */
     sr_send_packet (
-      lsu_param->sr, 
-      packet, 
-      len, 
-      lsu_param->interface->name
-    );
+        lsu_param->sr, 
+        packet, 
+        len, 
+        lsu_param->interface->name
+        );
 
     free(entrada_cache);
 
-  /* NO se conoce la MAC. 
-   * */
+    /* NO se conoce la MAC. 
+     * */
   } else {
     printf("#### -> MAC not found\n");
 
     struct sr_arpreq * req = sr_arpcache_queuereq (
-      &(lsu_param->sr->cache), 
-      ipDst,
-      packet, 
-      len, 
-      lsu_param->interface->name
-    );
+        &(lsu_param->sr->cache), 
+        ipDst,
+        packet, 
+        len, 
+        lsu_param->interface->name
+        );
     handle_arpreq (lsu_param->sr, req);
   }
 
   free(packet);
   printf("#### -> Packet Sent.\n");
-  
+
   return NULL;
 } /* -- send_lsu -- */
+
 
 
 /*---------------------------------------------------------------------
@@ -592,7 +598,7 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     Debug("-> PWOSPF: HELLO Packet dropped, invalid hello interval\n");
     return;
   }
-  
+
   struct in_addr res;
   res.s_addr = ospf_hdr->rid;
   refresh_neighbors_alive(g_neighbors, res);
@@ -619,7 +625,6 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   Debug("-> Has finished.\n");
 } /* -- sr_handle_pwospf_hello_packet -- */
 
-
 /*---------------------------------------------------------------------
  * Method: sr_handle_pwospf_lsu_packet
  *
@@ -640,7 +645,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(rx_lsu_param->packet + size);
   size += sizeof(ospfv2_lsu_hdr_t);
   ospfv2_lsa_t * lsa_hdr = (ospfv2_lsa_t *)(rx_lsu_param->packet + size);
-  
+
   if (ospf_hdr->csum != ospfv2_cksum(ospf_hdr, size)) {
     Debug("-> PWOSPF: LSU Packet dropped, invalid checksum\n");
     return NULL;
@@ -650,7 +655,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     Debug("-> PWOSPF: LSU Packet dropped, originated by this router\n");
     return NULL;
   }
-  
+
   struct in_addr rid;
   rid.s_addr = ospf_hdr->rid;
   if (!check_sequence_number(g_topology, rid, lsu_hdr->seq)) {
@@ -669,14 +674,14 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
     pwospf_lock(rx_lsu_param->sr->ospf_subsys);
     refresh_topology_entry(
-      g_topology, 
-      router_id,
-      subnet,
-      mask,
-      neighbor_id,
-      next_hop,
-      lsu_hdr->seq
-    );
+        g_topology, 
+        router_id,
+        subnet,
+        mask,
+        neighbor_id,
+        next_hop,
+        lsu_hdr->seq
+        );
     pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
     lsa_hdr++;
@@ -701,7 +706,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       /* Construcción del paquete. */
       uint8_t * packet;
       unsigned len = construir_packete_lsu (&packet, rx_lsu_param->sr, elem, 64);
-      
+
       sr_ip_hdr_t * ip_hdr_new = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
       ip_hdr_new->ip_src = elem->ip;
       ip_hdr_new->ip_dst = elem->neighbor_ip;
@@ -724,11 +729,11 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
         /* envio del paquete.
          * */
         sr_send_packet (
-          rx_lsu_param->sr, 
-          packet, 
-          len, 
-          elem->name
-        );
+            rx_lsu_param->sr, 
+            packet, 
+            len, 
+            elem->name
+            );
 
         free(entrada_cache);
 
@@ -738,12 +743,12 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
         printf("#### -> MAC not found\n");
 
         struct sr_arpreq * req = sr_arpcache_queuereq (
-          &(rx_lsu_param->sr->cache), 
-          ipDst,
-          packet, 
-          len, 
-          elem->name
-        );
+            &(rx_lsu_param->sr->cache), 
+            ipDst,
+            packet, 
+            len, 
+            elem->name
+            );
         handle_arpreq (rx_lsu_param->sr, req);
       }
 
@@ -752,7 +757,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
     elem = elem->next;
   }
-          
+
   return NULL;
 } /* -- sr_handle_pwospf_lsu_packet -- */
 
@@ -780,7 +785,8 @@ void sr_handle_pwospf_packet(struct sr_instance* sr, uint8_t* packet, unsigned i
   Debug("-> PWOSPF: Detecting PWOSPF Packet\n");
   Debug("      [Type = %d]\n", rx_ospfv2_hdr->type);
 
-  switch(rx_ospfv2_hdr->type) {
+  switch(rx_ospfv2_hdr->type)
+  {
     case OSPF_TYPE_HELLO:
       sr_handle_pwospf_hello_packet(sr, packet, length, rx_if);
       break;
