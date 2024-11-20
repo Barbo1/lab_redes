@@ -708,6 +708,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   pwospf_lock(rx_lsu_param->sr->ospf_subsys);
   printf("-$-$-$-$ -> -1");
   while (i < lsu_hdr->num_adv) {
+    printf("iteracion: %d", i);
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
     router_id.s_addr = ospf_hdr->rid;
     neighbor_id.s_addr = lsa_hdr->rid;
