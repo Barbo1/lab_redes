@@ -754,12 +754,14 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   params->topology = g_topology;
   params->mutex = g_dijkstra_mutex;
 
+  printf("-$-$-$-$ -> 2");
   if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) {
     printf("Thread not allocated");
     assert(0);
   } else {
     pthread_detach(g_dijkstra_thread);
   }
+  printf("-$-$-$-$ -> 1");
   pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
   lsu_hdr->ttl--;
@@ -769,10 +771,8 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   }
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
 
-  printf("-$-$-$-$ -> 1");
   struct sr_if * elem = rx_lsu_param->sr->if_list;
   while (elem) {
-    printf("-$-$-$-$ -> 2");
     if (elem->ip != rx_lsu_param->rx_if->ip && elem->neighbor_id != 0) {
 
       /* Construcción del paquete. 
