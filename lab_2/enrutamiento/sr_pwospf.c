@@ -203,6 +203,10 @@ void* check_neighbors_life(void* arg) {
 
   while(1) {
     usleep(1000000);
+    
+    printf("->-->>--->>>---->>>>----->>>>>>");
+    printf("->-->>--->>> Se ejecuta neighbor.");
+    printf("->-->>--->>>---->>>>----->>>>>>");
 
     pwospf_lock(sr->ospf_subsys);
 
@@ -238,6 +242,10 @@ void* check_topology_entries_age(void* arg) {
 
   while(1) {
     usleep(1000000);
+    
+    printf("->-->>--->>>---->>>>----->>>>>>");
+    printf("->-->>--->>> Se ejecuta topology.");
+    printf("->-->>--->>>---->>>>----->>>>>>");
 
     pwospf_lock(sr->ospf_subsys);
 
@@ -280,6 +288,9 @@ void* send_hellos(void* arg) {
   while(1) {
     usleep(1000000);
 
+    printf("->-->>--->>>---->>>>----->>>>>>");
+    printf("->-->>--->>> Se ejecuta hellos.");
+    printf("->-->>--->>>---->>>>----->>>>>>");
     pwospf_lock(sr->ospf_subsys);
 
     struct sr_if * inter = sr->if_list;
@@ -289,7 +300,6 @@ void* send_hellos(void* arg) {
         params->interface = inter;
         params->sr = sr;
         
-        printf("->-->>--->>> Por Esta Parte");
         if (pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, params)) {
           printf("Thread not allocated");
           assert(0);
@@ -395,6 +405,10 @@ void* send_all_lsu(void* arg) {
 
     /* OSPF_DEFAULT_LSUINT *  */
     usleep(1000000);
+    
+    printf("->-->>--->>>---->>>>----->>>>>>");
+    printf("->-->>--->>> all lsu.");
+    printf("->-->>--->>>---->>>>----->>>>>>");
 
     pwospf_lock(sr->ospf_subsys);
 
