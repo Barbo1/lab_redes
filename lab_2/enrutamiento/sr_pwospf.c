@@ -717,19 +717,19 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     mask.s_addr = lsa_hdr->mask;
     next_hop.s_addr = rx_lsu_param->rx_if->neighbor_ip;
     
-    printf("\nrouter id:");
+    printf("\nrouter id:\n");
     print_addr_ip_int(router_id.s_addr);
     
-    printf("\nneighbor id:");
+    printf("\nneighbor id:\n");
     print_addr_ip_int(neighbor_id.s_addr);
     
-    printf("\nneighbor id:");
+    printf("\nsubnet:\n");
     print_addr_ip_int(subnet.s_addr);
     
-    printf("\nneighbor id:");
+    printf("\nmask:\n");
     print_addr_ip_int(mask.s_addr);
     
-    printf("\nneighbor id:");
+    printf("\nnext hop:\n");
     print_addr_ip_int(next_hop.s_addr);
 
     refresh_topology_entry(
@@ -780,11 +780,16 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       uint32_t ipDst = elem->neighbor_ip;
       unsigned len = rx_lsu_param->length;
       uint8_t * packet = (uint8_t *)malloc(len);
-      memcpy(packet, rx_lsu_param->packet, len);
+      uint8_t * packet_last = rx_lsu_param->packet;
+      memcpy(packet, packet_last, len);
 
+      fprintf(stderr, "---------->> 1\n");
       sr_ip_hdr_t * ip_hdr_new = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
+      fprintf(stderr, "---------->> 2\n");
       ip_hdr_new->ip_src = elem->ip;
+      fprintf(stderr, "---------->> 3\n");
       ip_hdr_new->ip_dst = elem->neighbor_ip;
+      fprintf(stderr, "---------->> 4\n");
       sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
 
       Debug("\n\nPWOSPF: LSU packet constructed\n");
