@@ -781,15 +781,16 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       unsigned len = rx_lsu_param->length;
       uint8_t * packet = (uint8_t *)malloc(len);
       uint8_t * packet_last = rx_lsu_param->packet;
-      memcpy(packet, packet_last, len);
 
-      fprintf(stderr, "---------->> 1\n");
+      fprintf(stderr, "---------->> antes del malloc.\n");
+      memcpy(packet, packet_last, len);
+      fprintf(stderr, "---------->> .\n");
+
       sr_ip_hdr_t * ip_hdr_new = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
-      fprintf(stderr, "---------->> 2\n");
       ip_hdr_new->ip_src = elem->ip;
-      fprintf(stderr, "---------->> 3\n");
       ip_hdr_new->ip_dst = elem->neighbor_ip;
-      fprintf(stderr, "---------->> 4\n");
+      ip_hdr_new->ip_dst = elem->neighbor_ip;
+      ip_hdr_new->ip_sum = ip_cksum(ip_hdr_new, sizeof(sr_ip_hdr_t));
       sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
 
       Debug("\n\nPWOSPF: LSU packet constructed\n");
