@@ -204,9 +204,9 @@ void* check_neighbors_life(void* arg) {
   while(1) {
     usleep(1000000);
     
-    printf("->-->>--->>>---->>>>----->>>>>>");
-    printf("->-->>--->>> Se ejecuta neighbor.");
-    printf("->-->>--->>>---->>>>----->>>>>>");
+    printf("\n->-->>--->>>---->>>>----->>>>>>");
+    printf("\n->-->>--->>> Se ejecuta neighbor.");
+    printf("\n->-->>--->>>---->>>>----->>>>>>\n");
 
     pwospf_lock(sr->ospf_subsys);
 
@@ -243,9 +243,9 @@ void* check_topology_entries_age(void* arg) {
   while(1) {
     usleep(1000000);
     
-    printf("->-->>--->>>---->>>>----->>>>>>");
-    printf("->-->>--->>> Se ejecuta topology.");
-    printf("->-->>--->>>---->>>>----->>>>>>");
+    printf("\n->-->>--->>>---->>>>----->>>>>>");
+    printf("\n->-->>--->>> Se ejecuta topology.");
+    printf("\n->-->>--->>>---->>>>----->>>>>>\n");
 
     pwospf_lock(sr->ospf_subsys);
 
@@ -288,9 +288,9 @@ void* send_hellos(void* arg) {
   while(1) {
     usleep(1000000);
 
-    printf("->-->>--->>>---->>>>----->>>>>>");
-    printf("->-->>--->>> Se ejecuta hellos.");
-    printf("->-->>--->>>---->>>>----->>>>>>");
+    printf("\n->-->>--->>>---->>>>----->>>>>>");
+    printf("\n->-->>--->>> Se ejecuta hellos.");
+    printf("\n->-->>--->>>---->>>>----->>>>>>\n");
 
     pwospf_lock(sr->ospf_subsys);
     struct sr_if * inter = sr->if_list;
@@ -300,13 +300,14 @@ void* send_hellos(void* arg) {
         params->interface = inter;
         params->sr = sr;
         
+        printf("\n->-->>--->>> Por Esta Parte");
         if (pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, params)) {
           printf("Thread not allocated");
           assert(0);
         } else {
           pthread_detach(g_hello_packet_thread);
         }
-        printf("->-->>--->>> Salio");
+        printf("\n->-->>--->>> Salio");
 
         inter->helloint = 0;
       }
@@ -367,8 +368,8 @@ void* send_hello_packet(void* arg) {
   ospf_hello_hdr->helloint = OSPF_DEFAULT_HELLOINT;
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t));
 
-  printf("$$$$ -> Packet Completed.\n");
-  printf("$$$ -> Packet Info:\n");
+  printf("\n$$$$ -> Packet Completed.\n");
+  printf("\n$$$ -> Packet Info:\n");
   print_hdr_eth(packet);
   print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
   print_hdr_ospf(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -386,7 +387,7 @@ void* send_hello_packet(void* arg) {
 
   free(packet);
 
-  printf("$$$$ -> Packet Sent.\n");
+  printf("\n$$$$ -> Packet Sent.\n");
 
   return NULL;
 } /* -- send_hello_packet -- */
@@ -407,9 +408,9 @@ void* send_all_lsu(void* arg) {
     /* OSPF_DEFAULT_LSUINT *  */
     usleep(1000000);
     
-    printf("->-->>--->>>---->>>>----->>>>>>");
-    printf("->-->>--->>> all lsu.");
-    printf("->-->>--->>>---->>>>----->>>>>>");
+    printf("\n->-->>--->>>---->>>>----->>>>>>");
+    printf("\n->-->>--->>> all lsu.");
+    printf("\n->-->>--->>>---->>>>----->>>>>>\n");
 
     pwospf_lock(sr->ospf_subsys);
     struct sr_if * inter = sr->if_list;
