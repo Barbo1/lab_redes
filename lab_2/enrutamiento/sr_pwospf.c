@@ -622,12 +622,15 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   res.s_addr = ospf_hdr->rid;
   refresh_neighbors_alive(g_neighbors, res);
 
+  Debug("-> 1\n");
   if (rx_if->neighbor_id == 0) {
     rx_if->neighbor_id = ospf_hdr->rid;
     rx_if->neighbor_ip = ip_hdr->ip_src;
 
     struct sr_if * elem = sr->if_list;
+    Debug("-> 2\n");
     while (elem) {
+      Debug("-> interfaz: %s\n", elem->name);
       if (elem->ip != rx_if->ip) {
         pwospf_lock(sr->ospf_subsys);
         powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
@@ -699,14 +702,14 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     next_hop.s_addr = rx_lsu_param->rx_if->neighbor_ip;
 
     refresh_topology_entry(
-        g_topology, 
-        router_id,
-        subnet,
-        mask,
-        neighbor_id,
-        next_hop,
-        lsu_hdr->seq
-        );
+      g_topology, 
+      router_id,
+      subnet,
+      mask,
+      neighbor_id,
+      next_hop,
+      lsu_hdr->seq
+    );
 
     lsa_hdr++;
   }
