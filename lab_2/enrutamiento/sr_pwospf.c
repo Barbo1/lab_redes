@@ -291,8 +291,8 @@ void* send_hellos(void* arg) {
     printf("->-->>--->>>---->>>>----->>>>>>");
     printf("->-->>--->>> Se ejecuta hellos.");
     printf("->-->>--->>>---->>>>----->>>>>>");
-    pwospf_lock(sr->ospf_subsys);
 
+    pwospf_lock(sr->ospf_subsys);
     struct sr_if * inter = sr->if_list;
     while (inter) {
       if ((inter->helloint)++ < OSPF_NEIGHBOR_TIMEOUT) {
@@ -312,7 +312,6 @@ void* send_hellos(void* arg) {
       }
       inter = inter->next;
     }
-
     pwospf_unlock(sr->ospf_subsys);
   };
 
@@ -376,12 +375,14 @@ void* send_hello_packet(void* arg) {
 
   /* envio del paquete.
    * */
+  pwospf_lock(hello_param->sr->ospf_subsys);
   sr_send_packet (
     hello_param->sr, 
     packet, 
     len, 
     hello_param->interface->name
   );
+  pwospf_unlock(hello_param->sr->ospf_subsys);
 
   free(packet);
 
@@ -411,7 +412,6 @@ void* send_all_lsu(void* arg) {
     printf("->-->>--->>>---->>>>----->>>>>>");
 
     pwospf_lock(sr->ospf_subsys);
-
     struct sr_if * inter = sr->if_list;
     while (inter) {
       powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
@@ -427,7 +427,6 @@ void* send_all_lsu(void* arg) {
 
       inter = inter->next;
     }
-
     pwospf_unlock(sr->ospf_subsys);
   };
 
@@ -555,6 +554,7 @@ void* send_lsu(void* arg) {
 
   /* Se conoce la MAC. 
    * */
+  pwospf_lock(lsu_param->sr->ospf_subsys);
   if (entrada_cache) {
     printf("#### -> Found MAC in the cache\n");
 
@@ -586,6 +586,7 @@ void* send_lsu(void* arg) {
     );
     handle_arpreq (lsu_param->sr, req);
   }
+  pwospf_unlock(lsu_param->sr->ospf_subsys);
 
   free(packet);
   printf("#### -> Packet Sent.\n");
@@ -722,7 +723,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     lsa_hdr++;
   }
 
-  pwospf_lock(rx_lsu_param->sr->ospf_subsys);
   dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
   params->sr = rx_lsu_param->sr;
   params->rid = g_router_id;
@@ -768,6 +768,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
       struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
 
+      pwospf_lock(rx_lsu_param->sr->ospf_subsys);
       if (entrada_cache) {
         printf("#### -> Found MAC in the cache\n");
 
@@ -795,6 +796,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
         );
         handle_arpreq (rx_lsu_param->sr, req);
       }
+      pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
       free(packet);
     }
