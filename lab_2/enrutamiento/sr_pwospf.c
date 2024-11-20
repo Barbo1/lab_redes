@@ -289,13 +289,14 @@ void* send_hellos(void* arg) {
         params->interface = inter;
         params->sr = sr;
         
-        printf("->-->>--->>> Por Esta Linea");
+        printf("->-->>--->>> Por Esta Parte");
         if (pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, params)) {
           printf("Thread not allocated");
           assert(0);
         } else {
           pthread_detach(g_hello_packet_thread);
         }
+        printf("->-->>--->>> Salio");
 
         inter->helloint = 0;
       }
