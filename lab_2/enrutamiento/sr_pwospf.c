@@ -707,7 +707,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   int i = 0;
   pwospf_lock(rx_lsu_param->sr->ospf_subsys);
   printf("-$-$-$-$ -> -1");
-  while (i++ < lsu_hdr->num_adv) {
+  while (i < lsu_hdr->num_adv) {
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
     router_id.s_addr = ospf_hdr->rid;
     neighbor_id.s_addr = lsa_hdr->rid;
@@ -725,6 +725,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       lsu_hdr->seq
     );
 
+    i++;
     lsa_hdr++;
   }
 
@@ -758,7 +759,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
       /* Construcción del paquete. 
        * */
-
       uint32_t ipDst = elem->neighbor_ip;
       unsigned len = rx_lsu_param->length;
       uint8_t * packet = (uint8_t *)malloc(len);
@@ -770,6 +770,14 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
 
       Debug("\n\nPWOSPF: LSU packet constructed\n");
+
+      print_hdr_eth(packet);
+      print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+      print_hdr_ospf(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+      fprintf(stderr, "LSU header\n");
+      fprintf(stderr, "\tseq: %d\n", lsu_hdr->seq);
+      fprintf(stderr, "\tttl: %d\n", lsu_hdr->ttl);
+      fprintf(stderr, "\tadv: %d\n", lsu_hdr->num_adv);
 
       /* * * * * * * * * * * 
        * envio del paquete *
@@ -790,8 +798,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
           len, 
           elem->name
         );
-
-        free(entrada_cache);
 
       } else {
         printf("#### -> MAC not found\n");
