@@ -142,8 +142,10 @@ void* pwospf_run_thread(void* arg) {
   while(g_router_id.s_addr == 0)
   {
     struct sr_if* int_temp = sr->if_list;
-    while(int_temp != NULL) {
-      if (int_temp->ip > g_router_id.s_addr) {
+    while(int_temp != NULL)
+    {
+      if (int_temp->ip > g_router_id.s_addr)
+      {
         g_router_id.s_addr = int_temp->ip;
       }
 
@@ -152,6 +154,7 @@ void* pwospf_run_thread(void* arg) {
   }
   Debug("\n\nPWOSPF: Selecting the highest IP address on a router as the router ID\n");
   Debug("-> PWOSPF: The router ID is [%s]\n", inet_ntoa(g_router_id));
+
 
   Debug("\nPWOSPF: Detecting the router interfaces and adding their networks to the routing table\n");
   struct sr_if* int_temp = sr->if_list;
@@ -332,10 +335,13 @@ void* send_hello_packet(void* arg) {
   powspf_hello_lsu_param_t* hello_param = ((powspf_hello_lsu_param_t*)(arg));
 
   unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t);
+  fprintf(stderr, "---------->> eoea 1.\n");
   uint8_t * packet = (uint8_t *)malloc(len * sizeof(uint8_t));
 
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
+  fprintf(stderr, "---------->> eoea 2.\n");
   memcpy(ether_hdr->ether_shost, hello_param->interface->addr, ETHER_ADDR_LEN);
+  fprintf(stderr, "---------->> eoea 3.\n");
   memset(ether_hdr->ether_dhost, 0xFF, ETHER_ADDR_LEN);
   ether_hdr->ether_type = htons(ethertype_ip);
 
@@ -376,12 +382,16 @@ void* send_hello_packet(void* arg) {
 
   /* envio del paquete.
    * */
+  pwospf_lock(hello_param->sr->ospf_subsys);
   sr_send_packet (
     hello_param->sr, 
     packet, 
     len, 
     hello_param->interface->name
   );
+  pwospf_unlock(hello_param->sr->ospf_subsys);
+
+  free(packet);
 
   printf("\n$$$$ -> Packet Sent.\n");
 
@@ -554,6 +564,7 @@ void* send_lsu(void* arg) {
 
   /* Se conoce la MAC. 
    * */
+  pwospf_lock(lsu_param->sr->ospf_subsys);
   if (entrada_cache) {
     printf("#### -> Found MAC in the cache\n");
 
@@ -569,6 +580,8 @@ void* send_lsu(void* arg) {
       lsu_param->interface->name
     );
 
+    free(entrada_cache);
+
     /* NO se conoce la MAC. 
      * */
   } else {
@@ -583,6 +596,9 @@ void* send_lsu(void* arg) {
     );
     handle_arpreq (lsu_param->sr, req);
   }
+  pwospf_unlock(lsu_param->sr->ospf_subsys);
+
+  free(packet);
   printf("#### -> Packet Sent.\n");
 
   return NULL;
@@ -694,6 +710,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   }
 
   int i = 0;
+  pwospf_lock(rx_lsu_param->sr->ospf_subsys);
   while (i < lsu_hdr->num_adv) {
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
     router_id.s_addr = ospf_hdr->rid;
@@ -734,19 +751,21 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     }
   }
 
+  printf("-$-$-$-$ -> 0");
   dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
   params->sr = rx_lsu_param->sr;
   params->rid = g_router_id;
   params->topology = g_topology;
   params->mutex = g_dijkstra_mutex;
 
-  pwospf_lock(rx_lsu_param->sr->ospf_subsys);
+  printf("-$-$-$-$ -> 2");
   if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) {
     printf("Thread not allocated");
     assert(0);
   } else {
     pthread_detach(g_dijkstra_thread);
   }
+  printf("-$-$-$-$ -> 1");
   pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
   lsu_hdr->ttl--;
@@ -795,6 +814,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
       struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
 
+      pwospf_lock(rx_lsu_param->sr->ospf_subsys);
       if (entrada_cache) {
         printf("#### -> Found MAC in the cache\n");
 
@@ -820,8 +840,10 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
         );
         handle_arpreq (rx_lsu_param->sr, req);
       }
+      pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
       printf("-$-$-$-$ -> 3");
+      free(packet);
     }
 
     elem = elem->next;
