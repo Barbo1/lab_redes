@@ -706,6 +706,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
   int i = 0;
   pwospf_lock(rx_lsu_param->sr->ospf_subsys);
+  printf("-$-$-$-$ -> -1");
   while (i++ < lsu_hdr->num_adv) {
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
     router_id.s_addr = ospf_hdr->rid;
@@ -727,6 +728,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     lsa_hdr++;
   }
 
+  printf("-$-$-$-$ -> 0");
   dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
   params->sr = rx_lsu_param->sr;
   params->rid = g_router_id;
