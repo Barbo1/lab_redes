@@ -341,7 +341,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
           sr, 
           packet, 
           len, 
-          mine_interface
+          sr_get_interface(sr, interface)
         );
 
         return;
