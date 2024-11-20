@@ -113,6 +113,7 @@ void refresh_topology_entry(struct pwospf_topology_entry* first_entry, struct in
     Debug("        [Mask = %s]\n", inet_ntoa(net_mask));
     Debug("        [Neighbor ID = %s]\n", inet_ntoa(neighbor_id));
     add_topology_entry(first_entry, create_ospfv2_topology_entry(router_id, net_num, net_mask, neighbor_id, next_hop, sequence_num));
+    printf("\n-r-r-r-r-1--1-1-r-1-r-wq-wrqegf\n");
 }
 
 struct pwospf_topology_entry* create_ospfv2_topology_entry(struct in_addr router_id, struct in_addr net_num, struct in_addr net_mask,
