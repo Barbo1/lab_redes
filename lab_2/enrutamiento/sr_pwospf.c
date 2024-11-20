@@ -707,14 +707,21 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   int i = 0;
   pwospf_lock(rx_lsu_param->sr->ospf_subsys);
   printf("-$-$-$-$ -> -1");
+  printf("cantidad de iteraciones: %d", lsu_hdr->num_adv);
   while (i < lsu_hdr->num_adv) {
     printf("iteracion: %d", i);
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
+    printf("-$-$-$-$ -> A");
     router_id.s_addr = ospf_hdr->rid;
+    printf("-$-$-$-$ -> B");
     neighbor_id.s_addr = lsa_hdr->rid;
+    printf("-$-$-$-$ -> C");
     subnet.s_addr = lsa_hdr->subnet;
+    printf("-$-$-$-$ -> D");
     mask.s_addr = lsa_hdr->mask;
+    printf("-$-$-$-$ -> E");
     next_hop.s_addr = rx_lsu_param->rx_if->neighbor_ip;
+    printf("-$-$-$-$ -> F");
 
     refresh_topology_entry(
       g_topology, 
@@ -725,6 +732,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       next_hop,
       lsu_hdr->seq
     );
+    printf("-$-$-$-$ -> H");
 
     i++;
     lsa_hdr++;
