@@ -450,18 +450,18 @@ void* send_all_lsu(void* arg) {
  *
  *---------------------------------------------------------------------*/
 
-unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struct sr_if* interface, uint8_t ttl) {
+unsigned construir_packete_lsu (uint8_t * packet, struct sr_instance* sr, struct sr_if* interface, uint8_t ttl) {
   unsigned lsas = count_routes(sr);
 
   unsigned ospf_size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
   unsigned len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + ospf_size;
-  *packet = (uint8_t *)malloc(len);
+  packet = (uint8_t *)malloc(len);
 
-  sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)*packet;
+  sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
   ether_hdr->ether_type = htons(ethertype_ip);
 
   /* Inicializo cabezal IP */
-  sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t));
+  sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   ip_hdr->ip_v = 4;
   ip_hdr->ip_hl = 5;
   ip_hdr->ip_tos = 0;
@@ -476,7 +476,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   ip_hdr->ip_sum = ip_cksum(ip_hdr, sizeof(sr_ip_hdr_t));
 
   /* Inicializo cabezal de PWOSPF con version 2 y tipo HELLO */
-  ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
   ospf_hdr->version = OSPF_V2;
   ospf_hdr->type = OSPF_TYPE_LSU;
   ospf_hdr->len = htons(ospf_size);
@@ -485,13 +485,13 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   ospf_hdr->autype = 0;
   ospf_hdr->audata = 0;
 
-  ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
+  ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
   lsu_hdr->unused = 0;
   lsu_hdr->seq = g_sequence_num;
   lsu_hdr->ttl = 64;
   lsu_hdr->num_adv = lsas;
 
-  ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
+  ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
 
   pwospf_lock(sr->ospf_subsys);
   struct sr_rt * elem = sr->routing_table;
@@ -507,15 +507,15 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
 
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, ospf_size);
 
-  print_hdr_eth(*packet);
-  print_hdr_ip(*packet + sizeof(sr_ethernet_hdr_t));
-  print_hdr_ospf(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  print_hdr_eth(packet);
+  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+  print_hdr_ospf(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
   fprintf(stderr, "LSU header\n");
   fprintf(stderr, "\tseq: %d\n", lsu_hdr->seq);
   fprintf(stderr, "\tttl: %d\n", lsu_hdr->ttl);
   fprintf(stderr, "\tadv: %d\n", lsu_hdr->num_adv);
 
-  lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
+  lsa_part = (ospfv2_lsa_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
   int i = 0;
   while (i < lsas) {
     fprintf(stderr, "\tsubnet: ");
@@ -553,7 +553,7 @@ void* send_lsu(void* arg) {
 
   /* Construcción del paquete. */
   uint8_t * packet;
-  unsigned len = construir_packete_lsu (&packet, lsu_param->sr, lsu_param->interface, 64);
+  unsigned len = construir_packete_lsu (packet, lsu_param->sr, lsu_param->interface, 64);
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
 
   Debug("\n\nPWOSPF: LSU packet constructed\n");
@@ -751,14 +751,12 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     }
   }
 
-  printf("-$-$-$-$ -> 0");
   dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
   params->sr = rx_lsu_param->sr;
   params->rid = g_router_id;
   params->topology = g_topology;
   params->mutex = g_dijkstra_mutex;
 
-  printf("-$-$-$-$ -> 2");
   if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) {
     printf("Thread not allocated");
     assert(0);
