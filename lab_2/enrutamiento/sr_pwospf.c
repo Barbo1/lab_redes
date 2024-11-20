@@ -729,7 +729,9 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     printf("-$-$-$-$ -> H");
 
     i++;
-    lsa_hdr++;
+    if (i < lsu_hdr->num_adv) {
+      lsa_hdr++;
+    }
   }
 
   dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
