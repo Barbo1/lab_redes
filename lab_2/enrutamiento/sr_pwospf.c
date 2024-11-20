@@ -779,6 +779,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
        * */
       uint32_t ipDst = elem->neighbor_ip;
       unsigned len = rx_lsu_param->length;
+      printf("---------->> esto tiene len = %d.\n", len);
       uint8_t * packet = (uint8_t *)malloc(len);
       uint8_t * packet_last = rx_lsu_param->packet;
 
