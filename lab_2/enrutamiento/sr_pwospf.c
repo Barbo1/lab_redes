@@ -27,7 +27,7 @@
 #include "pwospf_topology.h"
 #include "dijkstra.h"
 
-pthread_t hello_thread;
+/*pthread_t hello_thread;*/
 pthread_t g_hello_packet_thread;
 pthread_t g_all_lsu_thread;
 pthread_t g_lsu_thread;
@@ -35,7 +35,6 @@ pthread_t g_neighbors_thread;
 pthread_t g_topology_entries_thread;
 pthread_t g_rx_lsu_thread;
 pthread_t g_dijkstra_thread;
-pthread_t g_dijkstra_thread_1;
 
 pthread_mutex_t g_dijkstra_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -87,7 +86,7 @@ int pwospf_init(struct sr_instance* sr)
   g_topology = create_ospfv2_topology_entry(zero, zero, zero, zero, zero, 0);
 
   /* -- start thread subsystem -- */
-  if(pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) { 
+  if( pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) { 
     perror("pthread_create");
     assert(0);
   }
@@ -105,10 +104,8 @@ int pwospf_init(struct sr_instance* sr)
 
 void pwospf_lock(struct pwospf_subsys* subsys)
 {
-  if (pthread_mutex_lock(&subsys->lock)) { 
-    printf("lock tuvo un fallo");
-    assert(0); 
-  }
+  if ( pthread_mutex_lock(&subsys->lock) )
+  { assert(0); }
 }
 
 /*---------------------------------------------------------------------
@@ -120,10 +117,8 @@ void pwospf_lock(struct pwospf_subsys* subsys)
 
 void pwospf_unlock(struct pwospf_subsys* subsys)
 {
-  if (pthread_mutex_unlock(&subsys->lock)) { 
-    printf("unlock tuvo un fallo");
-    assert(0); 
-  }
+  if ( pthread_mutex_unlock(&subsys->lock) )
+  { assert(0); }
 } 
 
 /*---------------------------------------------------------------------
@@ -255,9 +250,6 @@ void* check_topology_entries_age(void* arg) {
 
     if (check_topology_age(g_topology)) {
       dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
-      if (params == NULL) {
-        printf("El puntero fue nulo.\n");
-      }
       params->sr = sr;
       params->rid = g_router_id;
       params->topology = g_topology;
@@ -304,18 +296,15 @@ void* send_hellos(void* arg) {
     while (inter) {
       if ((inter->helloint)++ < OSPF_NEIGHBOR_TIMEOUT) {
         powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
-        if (params == NULL) {
-          printf("El puntero fue nulo.\n");
-        }
         params->interface = inter;
         params->sr = sr;
         
         printf("\n->-->>--->>> Por Esta Parte");
-        if (pthread_create(&hello_thread, NULL, send_hello_packet, params)) {
+        if (pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, params)) {
           printf("Thread not allocated");
           assert(0);
         } else {
-          pthread_detach(hello_thread);
+          pthread_detach(g_hello_packet_thread);
         }
         printf("\n->-->>--->>> Salio");
 
@@ -342,16 +331,10 @@ void* send_hello_packet(void* arg) {
   powspf_hello_lsu_param_t* hello_param = ((powspf_hello_lsu_param_t*)(arg));
 
   unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t);
-  fprintf(stderr, "---------->> eoea 1.\n");
   uint8_t * packet = (uint8_t *)malloc(len * sizeof(uint8_t));
-  if (packet == NULL) {
-    printf("El puntero fue nulo.\n");
-  }
 
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
-  fprintf(stderr, "---------->> eoea 2.\n");
   memcpy(ether_hdr->ether_shost, hello_param->interface->addr, ETHER_ADDR_LEN);
-  fprintf(stderr, "---------->> eoea 3.\n");
   memset(ether_hdr->ether_dhost, 0xFF, ETHER_ADDR_LEN);
   ether_hdr->ether_type = htons(ethertype_ip);
 
@@ -434,9 +417,6 @@ void* send_all_lsu(void* arg) {
       g_sequence_num++;
       while (inter) {
         powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
-        if (params == NULL) {
-          printf("El puntero fue nulo.\n");
-        }
         params->interface = inter;
         params->sr = sr;
 
@@ -463,6 +443,95 @@ void* send_all_lsu(void* arg) {
  *
  *---------------------------------------------------------------------*/
 
+unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struct sr_if* interface, uint8_t ttl) {
+  unsigned lsas = count_routes(sr);
+
+  unsigned ospf_size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
+  unsigned len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + ospf_size;
+  *packet = (uint8_t *)malloc(len);
+
+  sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)*packet;
+  ether_hdr->ether_type = htons(ethertype_ip);
+
+  /* Inicializo cabezal IP */
+  sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t));
+  ip_hdr->ip_v = 4;
+  ip_hdr->ip_hl = 5;
+  ip_hdr->ip_tos = 0;
+  ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
+  ip_hdr->ip_p = ip_protocol_ospfv2;
+  ip_hdr->ip_id = 0;
+  ip_hdr->ip_dst = interface->neighbor_ip;
+  ip_hdr->ip_src = interface->ip;
+  ip_hdr->ip_off = IP_DF;
+  ip_hdr->ip_ttl = ttl;
+  ip_hdr->ip_sum = 0;
+  ip_hdr->ip_sum = ip_cksum(ip_hdr, sizeof(sr_ip_hdr_t));
+
+  /* Inicializo cabezal de PWOSPF con version 2 y tipo HELLO */
+  ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  ospf_hdr->version = OSPF_V2;
+  ospf_hdr->type = OSPF_TYPE_LSU;
+  ospf_hdr->len = htons(ospf_size);
+  ospf_hdr->rid = g_router_id.s_addr;
+  ospf_hdr->aid = 0;
+  ospf_hdr->autype = 0;
+  ospf_hdr->audata = 0;
+
+  ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
+  lsu_hdr->unused = 0;
+  lsu_hdr->seq = g_sequence_num;
+  lsu_hdr->ttl = 64;
+  lsu_hdr->num_adv = lsas;
+
+  ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
+
+  pwospf_lock(sr->ospf_subsys);
+  struct sr_rt * elem = sr->routing_table;
+  while (elem && (elem->admin_dst <= 1)) {
+    lsa_part->subnet = elem->dest.s_addr;
+    lsa_part->mask = elem->mask.s_addr;
+    lsa_part->rid = sr_get_interface(sr, elem->interface)->neighbor_id;
+
+    elem = elem->next;
+    lsa_part++;
+  }
+  pwospf_unlock(sr->ospf_subsys);
+
+  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, ospf_size);
+
+  print_hdr_eth(*packet);
+  print_hdr_ip(*packet + sizeof(sr_ethernet_hdr_t));
+  print_hdr_ospf(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  fprintf(stderr, "LSU header\n");
+  fprintf(stderr, "\tseq: %d\n", lsu_hdr->seq);
+  fprintf(stderr, "\tttl: %d\n", lsu_hdr->ttl);
+  fprintf(stderr, "\tadv: %d\n", lsu_hdr->num_adv);
+
+  lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
+  int i = 0;
+  while (i < lsas) {
+    fprintf(stderr, "\tsubnet: ");
+    print_addr_ip_int(lsa_part->subnet);
+    fprintf(stderr, "\tmask: ");
+    print_addr_ip_int(lsa_part->mask);
+    fprintf(stderr, "\trid: ");
+    print_addr_ip_int(lsa_part->rid);
+
+    lsa_part++;
+    i++;
+  }
+
+  return len;
+}
+
+/*---------------------------------------------------------------------
+ * Method: send_lsu
+ *
+ * Construye y envía paquetes LSU a través de una interfaz específica
+ *
+ *---------------------------------------------------------------------*/
+
 void* send_lsu(void* arg) {
   powspf_hello_lsu_param_t* lsu_param = ((powspf_hello_lsu_param_t*)(arg));
   Debug("\n\n()()()()()() -> Constructing and sending a LSU packet for interface %s: \n", lsu_param->interface->name);
@@ -477,86 +546,8 @@ void* send_lsu(void* arg) {
 
   /* Construcción del paquete. */
   uint8_t * packet;
-  unsigned lsas = count_routes(lsu_param->sr);
-
-  unsigned ospf_size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
-  unsigned len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + ospf_size;
-  packet = (uint8_t *)malloc(len);
-  if (packet == NULL) {
-    printf("El puntero fue nulo.\n");
-  }
-
+  unsigned len = construir_packete_lsu (&packet, lsu_param->sr, lsu_param->interface, 64);
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
-  ether_hdr->ether_type = htons(ethertype_ip);
-
-  /* Inicializo cabezal IP */
-  sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
-  ip_hdr->ip_v = 4;
-  ip_hdr->ip_hl = 5;
-  ip_hdr->ip_tos = 0;
-  ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
-  ip_hdr->ip_p = ip_protocol_ospfv2;
-  ip_hdr->ip_id = 0;
-  ip_hdr->ip_dst = lsu_param->interface->neighbor_ip;
-  ip_hdr->ip_src = lsu_param->interface->ip;
-  ip_hdr->ip_off = IP_DF;
-  ip_hdr->ip_ttl = 64;
-  ip_hdr->ip_sum = 0;
-  ip_hdr->ip_sum = ip_cksum(ip_hdr, sizeof(sr_ip_hdr_t));
-
-  /* Inicializo cabezal de PWOSPF con version 2 y tipo HELLO */
-  ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-  ospf_hdr->version = OSPF_V2;
-  ospf_hdr->type = OSPF_TYPE_LSU;
-  ospf_hdr->len = htons(ospf_size);
-  ospf_hdr->rid = g_router_id.s_addr;
-  ospf_hdr->aid = 0;
-  ospf_hdr->autype = 0;
-  ospf_hdr->audata = 0;
-
-  ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
-  lsu_hdr->unused = 0;
-  lsu_hdr->seq = g_sequence_num;
-  lsu_hdr->ttl = 64;
-  lsu_hdr->num_adv = lsas;
-
-  ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
-
-  pwospf_lock(lsu_param->sr->ospf_subsys);
-  struct sr_rt * elem = lsu_param->sr->routing_table;
-  while (elem && (elem->admin_dst <= 1)) {
-    lsa_part->subnet = elem->dest.s_addr;
-    lsa_part->mask = elem->mask.s_addr;
-    lsa_part->rid = sr_get_interface(lsu_param->sr, elem->interface)->neighbor_id;
-
-    elem = elem->next;
-    lsa_part++;
-  }
-  pwospf_unlock(lsu_param->sr->ospf_subsys);
-
-  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, ospf_size);
-
-  print_hdr_eth(packet);
-  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-  print_hdr_ospf(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-  fprintf(stderr, "LSU header\n");
-  fprintf(stderr, "\tseq: %d\n", lsu_hdr->seq);
-  fprintf(stderr, "\tttl: %d\n", lsu_hdr->ttl);
-  fprintf(stderr, "\tadv: %d\n", lsu_hdr->num_adv);
-
-  lsa_part = (ospfv2_lsa_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
-  int i = 0;
-  while (i < lsas) {
-    fprintf(stderr, "\tsubnet: ");
-    print_addr_ip_int(lsa_part->subnet);
-    fprintf(stderr, "\tmask: ");
-    print_addr_ip_int(lsa_part->mask);
-    fprintf(stderr, "\trid: ");
-    print_addr_ip_int(lsa_part->rid);
-
-    lsa_part++;
-    i++;
-  }
 
   Debug("\n\nPWOSPF: LSU packet constructed\n");
 
@@ -643,19 +634,18 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   res.s_addr = ospf_hdr->rid;
   refresh_neighbors_alive(g_neighbors, res);
 
+  Debug("-> 1\n");
   if (rx_if->neighbor_id == 0) {
     rx_if->neighbor_id = ospf_hdr->rid;
     rx_if->neighbor_ip = ip_hdr->ip_src;
 
+    Debug("-> 2\n");
     g_sequence_num++;
     struct sr_if * elem = sr->if_list;
     while (elem) {
       Debug("-> interfaz: %s\n", elem->name);
       if (elem->ip != rx_if->ip) {
         powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
-        if (params == NULL) {
-          printf("El puntero fue nulo.\n");
-        }
         params->interface = elem;
         params->sr = sr;
 
@@ -716,28 +706,16 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
   int i = 0;
   pwospf_lock(rx_lsu_param->sr->ospf_subsys);
+  printf("-$-$-$-$ -> -1");
+  printf("cantidad de iteraciones: %d", lsu_hdr->num_adv);
   while (i < lsu_hdr->num_adv) {
+    printf("iteracion: %d", i);
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
     router_id.s_addr = ospf_hdr->rid;
     neighbor_id.s_addr = lsa_hdr->rid;
     subnet.s_addr = lsa_hdr->subnet;
     mask.s_addr = lsa_hdr->mask;
     next_hop.s_addr = rx_lsu_param->rx_if->neighbor_ip;
-    
-    printf("\nrouter id:\n");
-    print_addr_ip_int(router_id.s_addr);
-    
-    printf("\nneighbor id:\n");
-    print_addr_ip_int(neighbor_id.s_addr);
-    
-    printf("\nsubnet:\n");
-    print_addr_ip_int(subnet.s_addr);
-    
-    printf("\nmask:\n");
-    print_addr_ip_int(mask.s_addr);
-    
-    printf("\nnext hop:\n");
-    print_addr_ip_int(next_hop.s_addr);
 
     refresh_topology_entry(
       g_topology, 
@@ -751,27 +729,22 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     printf("-$-$-$-$ -> H");
 
     i++;
-    if (i < lsu_hdr->num_adv) {
-      lsa_hdr++;
-    }
+    lsa_hdr++;
   }
 
+  printf("-$-$-$-$ -> 0");
   dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
-  if (params == NULL) {
-    printf("El puntero fue nulo.\n");
-  }
   params->sr = rx_lsu_param->sr;
   params->rid = g_router_id;
   params->topology = g_topology;
   params->mutex = g_dijkstra_mutex;
 
-  if (pthread_create(&g_dijkstra_thread_1, NULL, run_dijkstra, &params)) {
+  if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) {
     printf("Thread not allocated");
     assert(0);
   } else {
-    pthread_detach(g_dijkstra_thread_1);
+    pthread_detach(g_dijkstra_thread);
   }
-  printf("-$-$-$-$ -> 1");
   pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
   lsu_hdr->ttl--;
@@ -781,30 +754,22 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   }
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
 
+  printf("-$-$-$-$ -> 1");
   struct sr_if * elem = rx_lsu_param->sr->if_list;
   while (elem) {
+    printf("-$-$-$-$ -> 2");
     if (elem->ip != rx_lsu_param->rx_if->ip && elem->neighbor_id != 0) {
 
       /* Construcción del paquete. 
        * */
       uint32_t ipDst = elem->neighbor_ip;
       unsigned len = rx_lsu_param->length;
-      printf("---------->> esto tiene len = %d.\n", len);
       uint8_t * packet = (uint8_t *)malloc(len);
-      if (packet == NULL) {
-        printf("El puntero fue nulo.\n");
-      }
-      uint8_t * packet_last = rx_lsu_param->packet;
-
-      fprintf(stderr, "---------->> antes del malloc.\n");
-      memcpy(packet, packet_last, len);
-      fprintf(stderr, "---------->> .\n");
+      memcpy(packet, rx_lsu_param->packet, len);
 
       sr_ip_hdr_t * ip_hdr_new = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
       ip_hdr_new->ip_src = elem->ip;
       ip_hdr_new->ip_dst = elem->neighbor_ip;
-      ip_hdr_new->ip_dst = elem->neighbor_ip;
-      ip_hdr_new->ip_sum = ip_cksum(ip_hdr_new, sizeof(sr_ip_hdr_t));
       sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
 
       Debug("\n\nPWOSPF: LSU packet constructed\n");
@@ -881,9 +846,6 @@ void sr_handle_pwospf_packet(struct sr_instance* sr, uint8_t* packet, unsigned i
 
   ospfv2_hdr_t* rx_ospfv2_hdr = ((ospfv2_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t)));
   powspf_rx_lsu_param_t* rx_lsu_param = ((powspf_rx_lsu_param_t*)(malloc(sizeof(powspf_rx_lsu_param_t))));
-  if (rx_lsu_param == NULL) {
-    printf("El puntero fue nulo.\n");
-  }
 
   Debug("-> PWOSPF: Detecting PWOSPF Packet\n");
   Debug("      [Type = %d]\n", rx_ospfv2_hdr->type);
