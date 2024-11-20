@@ -242,13 +242,18 @@ void* check_topology_entries_age(void* arg) {
     pwospf_lock(sr->ospf_subsys);
 
     if (check_topology_age(g_topology)) {
-      dijkstra_param_t params;
-      params.sr = sr;
-      params.rid = g_router_id;
-      params.topology = g_topology;
-      params.mutex = g_dijkstra_mutex;
+      dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
+      params->sr = sr;
+      params->rid = g_router_id;
+      params->topology = g_topology;
+      params->mutex = g_dijkstra_mutex;
 
-      pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params);
+      if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, params)) {
+        printf("Thread not allocated");
+        assert(0);
+      } else {
+        pthread_detach(g_dijkstra_thread);
+      }
     }
 
     print_topolgy_table(g_topology);
@@ -280,11 +285,16 @@ void* send_hellos(void* arg) {
     struct sr_if * inter = sr->if_list;
     while (inter) {
       if ((inter->helloint)++ < OSPF_NEIGHBOR_TIMEOUT) {
-        powspf_hello_lsu_param_t params;
-        params.interface = inter;
-        params.sr = sr;
+        powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
+        params->interface = inter;
+        params->sr = sr;
 
-        pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, &params);
+        if (pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, params)) {
+          printf("Thread not allocated");
+          assert(0);
+        } else {
+          pthread_detach(g_hello_packet_thread);
+        }
 
         inter->helloint = 0;
       }
@@ -393,11 +403,16 @@ void* send_all_lsu(void* arg) {
 
     struct sr_if * inter = sr->if_list;
     while (inter) {
-      powspf_hello_lsu_param_t lsu_param;
-      lsu_param.interface = inter;
-      lsu_param.sr = sr;
+      powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
+      params->interface = inter;
+      params->sr = sr;
 
-      pthread_create(&g_lsu_thread, NULL, send_lsu, &lsu_param);
+      if (pthread_create(&g_lsu_thread, NULL, send_lsu, params)) {
+        printf("Thread not allocated");
+        assert(0);
+      } else {
+        pthread_detach(g_lsu_thread);
+      }
 
       inter = inter->next;
     }
@@ -614,12 +629,17 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     struct sr_if * elem = sr->if_list;
     while (elem) {
       if (elem->ip != rx_if->ip) {
-        powspf_hello_lsu_param_t lsu_param;
-        lsu_param.interface = elem;
-        lsu_param.sr = sr;
-
         pwospf_lock(sr->ospf_subsys);
-        pthread_create(&g_rx_lsu_thread, NULL, send_lsu, (void *)&lsu_param);
+        powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
+        params->interface = elem;
+        params->sr = sr;
+
+        if (pthread_create(&g_rx_lsu_thread, NULL, send_lsu, params)) {
+          printf("Thread not allocated");
+          assert(0);
+        } else {
+          pthread_detach(g_rx_lsu_thread);
+        }
         pwospf_unlock(sr->ospf_subsys);
       }
       elem = elem->next;
@@ -690,13 +710,20 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
     lsa_hdr++;
   }
-  dijkstra_param_t params;
-  params.sr = rx_lsu_param->sr;
-  params.rid = g_router_id;
-  params.topology = g_topology;
-  params.mutex = g_dijkstra_mutex;
 
-  pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params);
+  pwospf_lock(rx_lsu_param->sr->ospf_subsys);
+  dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
+  params->sr = rx_lsu_param->sr;
+  params->rid = g_router_id;
+  params->topology = g_topology;
+  params->mutex = g_dijkstra_mutex;
+
+  if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) {
+    printf("Thread not allocated");
+    assert(0);
+  } else {
+    pthread_detach(g_dijkstra_thread);
+  }
   pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
   if (--lsu_hdr->ttl > 0) {
@@ -715,7 +742,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       /* Construcción del paquete. */
       unsigned len = rx_lsu_param->length;
       uint8_t * packet = (uint8_t *)malloc(rx_lsu_param->length);
-      memcpy(packet, (uint8_t *)rx_lsu_param->packet, rx_lsu_param->length);
+      memcpy(packet, rx_lsu_param->packet, rx_lsu_param->length);
 
       sr_ip_hdr_t * ip_hdr_new = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
       ip_hdr_new->ip_src = elem->ip;
@@ -724,8 +751,9 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
       Debug("\n\nPWOSPF: LSU packet constructed\n");
 
-      /* envio del paquete.
-       * */
+      /* * * * * * * * * * * 
+       * envio del paquete *
+       * * * * * * * * * * */
 
       struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
 
