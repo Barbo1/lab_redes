@@ -383,8 +383,6 @@ void* send_hello_packet(void* arg) {
     hello_param->interface->name
   );
 
-  free(packet);
-
   printf("\n$$$$ -> Packet Sent.\n");
 
   return NULL;
@@ -571,8 +569,6 @@ void* send_lsu(void* arg) {
       lsu_param->interface->name
     );
 
-    free(entrada_cache);
-
     /* NO se conoce la MAC. 
      * */
   } else {
@@ -587,8 +583,6 @@ void* send_lsu(void* arg) {
     );
     handle_arpreq (lsu_param->sr, req);
   }
-
-  free(packet);
   printf("#### -> Packet Sent.\n");
 
   return NULL;
@@ -826,7 +820,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       }
 
       printf("-$-$-$-$ -> 3");
-      free(packet);
     }
 
     elem = elem->next;
