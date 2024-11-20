@@ -521,8 +521,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
  *
  *---------------------------------------------------------------------*/
 
-void* send_lsu(void* arg)
-{
+void* send_lsu(void* arg) {
   powspf_hello_lsu_param_t* lsu_param = ((powspf_hello_lsu_param_t*)(arg));
   Debug("\n\n()()()()()() -> Constructing and sending a LSU packet for interface %s: \n", lsu_param->interface->name);
 
@@ -632,18 +631,18 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     while (elem) {
       Debug("-> interfaz: %s\n", elem->name);
       if (elem->ip != rx_if->ip) {
-        pwospf_lock(sr->ospf_subsys);
         powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
         params->interface = elem;
         params->sr = sr;
 
+        Debug("-> 3\n");
         if (pthread_create(&g_rx_lsu_thread, NULL, send_lsu, params)) {
           printf("Thread not allocated");
           assert(0);
         } else {
           pthread_detach(g_rx_lsu_thread);
         }
-        pwospf_unlock(sr->ospf_subsys);
+        Debug("-> 4\n");
       }
       elem = elem->next;
     }
