@@ -716,6 +716,21 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     subnet.s_addr = lsa_hdr->subnet;
     mask.s_addr = lsa_hdr->mask;
     next_hop.s_addr = rx_lsu_param->rx_if->neighbor_ip;
+    
+    printf("\nrouter id:");
+    print_addr_ip_int(router_id.s_addr);
+    
+    printf("\nneighbor id:");
+    print_addr_ip_int(neighbor_id.s_addr);
+    
+    printf("\nneighbor id:");
+    print_addr_ip_int(subnet.s_addr);
+    
+    printf("\nneighbor id:");
+    print_addr_ip_int(mask.s_addr);
+    
+    printf("\nneighbor id:");
+    print_addr_ip_int(next_hop.s_addr);
 
     refresh_topology_entry(
       g_topology, 
