@@ -80,7 +80,6 @@ int pwospf_init(struct sr_instance* sr)
 
   g_sequence_num = 0;
 
-
   struct in_addr zero;
   zero.s_addr = 0;
   g_neighbors = create_ospfv2_neighbor(zero);
@@ -414,19 +413,22 @@ void* send_all_lsu(void* arg) {
 
     pwospf_lock(sr->ospf_subsys);
     struct sr_if * inter = sr->if_list;
-    while (inter) {
-      powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
-      params->interface = inter;
-      params->sr = sr;
+    if (inter) {
+      g_sequence_num++;
+      while (inter) {
+        powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
+        params->interface = inter;
+        params->sr = sr;
 
-      if (pthread_create(&g_lsu_thread, NULL, send_lsu, params)) {
-        printf("Thread not allocated");
-        assert(0);
-      } else {
-        pthread_detach(g_lsu_thread);
+        if (pthread_create(&g_lsu_thread, NULL, send_lsu, params)) {
+          printf("Thread not allocated");
+          assert(0);
+        } else {
+          pthread_detach(g_lsu_thread);
+        }
+
+        inter = inter->next;
       }
-
-      inter = inter->next;
     }
     pwospf_unlock(sr->ospf_subsys);
   };
@@ -478,7 +480,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
 
   ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
   lsu_hdr->unused = 0;
-  lsu_hdr->seq = g_sequence_num++;
+  lsu_hdr->seq = g_sequence_num;
   lsu_hdr->ttl = 64;
   lsu_hdr->num_adv = lsas;
 
@@ -565,11 +567,11 @@ void* send_lsu(void* arg) {
     /* envio del paquete.
      * */
     sr_send_packet (
-        lsu_param->sr, 
-        packet, 
-        len, 
-        lsu_param->interface->name
-        );
+      lsu_param->sr, 
+      packet, 
+      len, 
+      lsu_param->interface->name
+    );
 
     free(entrada_cache);
 
@@ -637,8 +639,9 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
     rx_if->neighbor_id = ospf_hdr->rid;
     rx_if->neighbor_ip = ip_hdr->ip_src;
 
-    struct sr_if * elem = sr->if_list;
     Debug("-> 2\n");
+    g_sequence_num++;
+    struct sr_if * elem = sr->if_list;
     while (elem) {
       Debug("-> interfaz: %s\n", elem->name);
       if (elem->ip != rx_if->ip) {
@@ -738,23 +741,26 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   }
   pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
-  if (--lsu_hdr->ttl > 0) {
+  lsu_hdr->ttl--;
+  if (lsu_hdr->ttl <= 0) {
     Debug("-> PWOSPF: LSU Packet dropped, tll insufficient.\n");
     return NULL;
   }
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
 
+  printf("-$-$-$-$ -> 1");
   struct sr_if * elem = rx_lsu_param->sr->if_list;
-  lsu_hdr->seq--;
   while (elem) {
+    printf("-$-$-$-$ -> 2");
     if (elem->ip != rx_lsu_param->rx_if->ip && elem->neighbor_id != 0) {
 
-      uint32_t ipDst = elem->neighbor_ip;
+      /* Construcción del paquete. 
+       * */
 
-      /* Construcción del paquete. */
+      uint32_t ipDst = elem->neighbor_ip;
       unsigned len = rx_lsu_param->length;
-      uint8_t * packet = (uint8_t *)malloc(rx_lsu_param->length);
-      memcpy(packet, rx_lsu_param->packet, rx_lsu_param->length);
+      uint8_t * packet = (uint8_t *)malloc(len);
+      memcpy(packet, rx_lsu_param->packet, len);
 
       sr_ip_hdr_t * ip_hdr_new = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
       ip_hdr_new->ip_src = elem->ip;
@@ -799,6 +805,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       }
       pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
+      printf("-$-$-$-$ -> 3");
       free(packet);
     }
 
