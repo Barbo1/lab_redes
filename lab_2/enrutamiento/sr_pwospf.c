@@ -86,7 +86,7 @@ int pwospf_init(struct sr_instance* sr)
   g_topology = create_ospfv2_topology_entry(zero, zero, zero, zero, zero, 0);
 
   /* -- start thread subsystem -- */
-  if( pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) { 
+  if(pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) { 
     perror("pthread_create");
     assert(0);
   }
@@ -104,7 +104,7 @@ int pwospf_init(struct sr_instance* sr)
 
 void pwospf_lock(struct pwospf_subsys* subsys)
 {
-  if ( pthread_mutex_lock(&subsys->lock) ) { 
+  if (pthread_mutex_lock(&subsys->lock)) { 
     printf("lock tuvo un fallo");
     assert(0); 
   }
@@ -119,7 +119,7 @@ void pwospf_lock(struct pwospf_subsys* subsys)
 
 void pwospf_unlock(struct pwospf_subsys* subsys)
 {
-  if ( pthread_mutex_unlock(&subsys->lock) ) { 
+  if (pthread_mutex_unlock(&subsys->lock)) { 
     printf("unlock tuvo un fallo");
     assert(0); 
   }
@@ -142,10 +142,8 @@ void* pwospf_run_thread(void* arg) {
   while(g_router_id.s_addr == 0)
   {
     struct sr_if* int_temp = sr->if_list;
-    while(int_temp != NULL)
-    {
-      if (int_temp->ip > g_router_id.s_addr)
-      {
+    while(int_temp != NULL) {
+      if (int_temp->ip > g_router_id.s_addr) {
         g_router_id.s_addr = int_temp->ip;
       }
 
@@ -154,7 +152,6 @@ void* pwospf_run_thread(void* arg) {
   }
   Debug("\n\nPWOSPF: Selecting the highest IP address on a router as the router ID\n");
   Debug("-> PWOSPF: The router ID is [%s]\n", inet_ntoa(g_router_id));
-
 
   Debug("\nPWOSPF: Detecting the router interfaces and adding their networks to the routing table\n");
   struct sr_if* int_temp = sr->if_list;
@@ -379,14 +376,12 @@ void* send_hello_packet(void* arg) {
 
   /* envio del paquete.
    * */
-  pwospf_lock(hello_param->sr->ospf_subsys);
   sr_send_packet (
     hello_param->sr, 
     packet, 
     len, 
     hello_param->interface->name
   );
-  pwospf_unlock(hello_param->sr->ospf_subsys);
 
   free(packet);
 
@@ -561,7 +556,6 @@ void* send_lsu(void* arg) {
 
   /* Se conoce la MAC. 
    * */
-  pwospf_lock(lsu_param->sr->ospf_subsys);
   if (entrada_cache) {
     printf("#### -> Found MAC in the cache\n");
 
@@ -593,7 +587,6 @@ void* send_lsu(void* arg) {
     );
     handle_arpreq (lsu_param->sr, req);
   }
-  pwospf_unlock(lsu_param->sr->ospf_subsys);
 
   free(packet);
   printf("#### -> Packet Sent.\n");
@@ -638,12 +631,10 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   res.s_addr = ospf_hdr->rid;
   refresh_neighbors_alive(g_neighbors, res);
 
-  Debug("-> 1\n");
   if (rx_if->neighbor_id == 0) {
     rx_if->neighbor_id = ospf_hdr->rid;
     rx_if->neighbor_ip = ip_hdr->ip_src;
 
-    Debug("-> 2\n");
     g_sequence_num++;
     struct sr_if * elem = sr->if_list;
     while (elem) {
@@ -709,7 +700,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   }
 
   int i = 0;
-  pwospf_lock(rx_lsu_param->sr->ospf_subsys);
   while (i < lsu_hdr->num_adv) {
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
     router_id.s_addr = ospf_hdr->rid;
@@ -748,21 +738,19 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     lsa_hdr++;
   }
 
-  printf("-$-$-$-$ -> 0");
   dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
   params->sr = rx_lsu_param->sr;
   params->rid = g_router_id;
   params->topology = g_topology;
   params->mutex = g_dijkstra_mutex;
 
-  printf("-$-$-$-$ -> 2");
+  pwospf_lock(rx_lsu_param->sr->ospf_subsys);
   if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) {
     printf("Thread not allocated");
     assert(0);
   } else {
     pthread_detach(g_dijkstra_thread);
   }
-  printf("-$-$-$-$ -> 1");
   pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
   lsu_hdr->ttl--;
@@ -811,7 +799,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
       struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
 
-      pwospf_lock(rx_lsu_param->sr->ospf_subsys);
       if (entrada_cache) {
         printf("#### -> Found MAC in the cache\n");
 
@@ -837,7 +824,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
         );
         handle_arpreq (rx_lsu_param->sr, req);
       }
-      pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
       printf("-$-$-$-$ -> 3");
       free(packet);
