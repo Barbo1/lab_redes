@@ -207,15 +207,15 @@ void* check_neighbors_life(void* arg) {
     pwospf_lock(sr->ospf_subsys);
 
     struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors);
-    if (vecinos_muertos) {
-      while (vecinos_muertos) {
-        struct sr_if * inter = sr->if_list;
-        while (inter->neighbor_id != vecinos_muertos->neighbor_id.s_addr)
-          inter = inter->next;
-        inter->helloint = 0;
-        inter->neighbor_ip = 0;
-        vecinos_muertos = vecinos_muertos->next;
-      }
+
+    while (vecinos_muertos) {
+      struct sr_if * inter = sr->if_list;
+      while (inter->neighbor_id != vecinos_muertos->neighbor_id.s_addr)
+        inter = inter->next;
+      inter->helloint = 0;
+      inter->neighbor_ip = 0;
+      inter->neighbor_id = 0;
+      vecinos_muertos = vecinos_muertos->next;
     }
 
     pwospf_unlock(sr->ospf_subsys);
@@ -288,7 +288,8 @@ void* send_hellos(void* arg) {
         powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
         params->interface = inter;
         params->sr = sr;
-
+        
+        printf("->-->>--->>> Por Esta Linea");
         if (pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, params)) {
           printf("Thread not allocated");
           assert(0);
@@ -339,7 +340,6 @@ void* send_hello_packet(void* arg) {
   ip_hdr->ip_src = hello_param->interface->ip;
   ip_hdr->ip_off = htons(IP_DF);
   ip_hdr->ip_ttl = 64;
-  ip_hdr->ip_sum = 0;
   ip_hdr->ip_sum = ip_cksum(ip_hdr, sizeof(sr_ip_hdr_t));
 
   /* Inicializo cabezal de PWOSPF con version 2 y tipo HELLO */
@@ -355,9 +355,7 @@ void* send_hello_packet(void* arg) {
   ospf_hello_hdr->nmask = hello_param->interface->mask;
   ospf_hello_hdr->padding = 0;
   ospf_hello_hdr->helloint = OSPF_DEFAULT_HELLOINT;
-
-  unsigned size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t);
-  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
+  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t));
 
   printf("$$$$ -> Packet Completed.\n");
   printf("$$$ -> Packet Info:\n");
@@ -367,14 +365,12 @@ void* send_hello_packet(void* arg) {
 
   /* envio del paquete.
    * */
-  pwospf_lock(hello_param->sr->ospf_subsys);
   sr_send_packet (
     hello_param->sr, 
     packet, 
     len, 
     hello_param->interface->name
   );
-  pwospf_unlock(hello_param->sr->ospf_subsys);
 
   free(packet);
 
@@ -431,9 +427,7 @@ void* send_all_lsu(void* arg) {
  *---------------------------------------------------------------------*/
 
 unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struct sr_if* interface, uint8_t ttl) {
-  pwospf_lock(sr->ospf_subsys);
   unsigned lsas = count_routes(sr);
-  pwospf_unlock(sr->ospf_subsys);
 
   unsigned ospf_size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
   unsigned len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + ospf_size;
@@ -759,7 +753,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
       struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
 
-      pwospf_lock(rx_lsu_param->sr->ospf_subsys);
       if (entrada_cache) {
         printf("#### -> Found MAC in the cache\n");
 
@@ -787,7 +780,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
         );
         handle_arpreq (rx_lsu_param->sr, req);
       }
-      pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
       free(packet);
     }
