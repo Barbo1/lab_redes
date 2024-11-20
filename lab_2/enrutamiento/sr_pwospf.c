@@ -104,8 +104,10 @@ int pwospf_init(struct sr_instance* sr)
 
 void pwospf_lock(struct pwospf_subsys* subsys)
 {
-  if ( pthread_mutex_lock(&subsys->lock) )
-  { assert(0); }
+  if ( pthread_mutex_lock(&subsys->lock) ) { 
+    printf("lock tuvo un fallo");
+    assert(0); 
+  }
 }
 
 /*---------------------------------------------------------------------
@@ -117,8 +119,10 @@ void pwospf_lock(struct pwospf_subsys* subsys)
 
 void pwospf_unlock(struct pwospf_subsys* subsys)
 {
-  if ( pthread_mutex_unlock(&subsys->lock) )
-  { assert(0); }
+  if ( pthread_mutex_unlock(&subsys->lock) ) { 
+    printf("unlock tuvo un fallo");
+    assert(0); 
+  }
 } 
 
 /*---------------------------------------------------------------------
@@ -706,10 +710,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
   int i = 0;
   pwospf_lock(rx_lsu_param->sr->ospf_subsys);
-  printf("-$-$-$-$ -> -1");
-  printf("cantidad de iteraciones: %d", lsu_hdr->num_adv);
   while (i < lsu_hdr->num_adv) {
-    printf("iteracion: %d", i);
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
     router_id.s_addr = ospf_hdr->rid;
     neighbor_id.s_addr = lsa_hdr->rid;
