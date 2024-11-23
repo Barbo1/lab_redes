@@ -204,7 +204,7 @@ void* check_neighbors_life(void* arg) {
     usleep(1000000);
 
     pwospf_lock(sr->ospf_subsys);
-
+    /*
     struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors), * elem;
 
     while ((elem = vecinos_muertos)) {
@@ -219,6 +219,7 @@ void* check_neighbors_life(void* arg) {
 
       free(elem);
     }
+    */
 
     pwospf_unlock(sr->ospf_subsys);
   }
@@ -246,6 +247,7 @@ void* check_topology_entries_age(void* arg) {
     printf("\n->-->>--->>>---->>>>----->>>>>>\n");
 
     pwospf_lock(sr->ospf_subsys);
+    /*
 
     if (check_topology_age(g_topology)) {
       dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
@@ -264,7 +266,7 @@ void* check_topology_entries_age(void* arg) {
 
     print_topolgy_table(g_topology);
     sr_print_routing_table(sr);
-
+    */
     pwospf_unlock(sr->ospf_subsys);
   }
 
@@ -287,7 +289,7 @@ void* send_hellos(void* arg) {
     usleep(1000000);
 
     pwospf_lock(sr->ospf_subsys);
-
+  
     struct sr_if * inter = sr->if_list;
     while (inter) {
       if ((inter->helloint)++ < OSPF_NEIGHBOR_TIMEOUT) {
@@ -404,6 +406,7 @@ void* send_all_lsu(void* arg) {
     printf("\n->-->>--->>>---->>>>----->>>>>>\n");
 
     pwospf_lock(sr->ospf_subsys);
+/*
     struct sr_if * inter = sr->if_list;
     if (inter) {
       g_sequence_num++;
@@ -422,6 +425,7 @@ void* send_all_lsu(void* arg) {
         inter = inter->next;
       }
     }
+    */
     pwospf_unlock(sr->ospf_subsys);
   };
 
@@ -691,7 +695,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   }
 
   int i = 0;
-  pwospf_lock(rx_lsu_param->sr->ospf_subsys);
   printf("-$-$-$-$ -> -1");
   printf("cantidad de iteraciones: %d", lsu_hdr->num_adv);
   while (i < lsu_hdr->num_adv) {
@@ -703,6 +706,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     mask.s_addr = lsa_hdr->mask;
     next_hop.s_addr = rx_lsu_param->rx_if->neighbor_ip;
 
+    pwospf_lock(rx_lsu_param->sr->ospf_subsys);
     refresh_topology_entry(
       g_topology, 
       router_id,
@@ -712,6 +716,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       next_hop,
       lsu_hdr->seq
     );
+    pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
     printf("-$-$-$-$ -> H");
 
     i++;
@@ -725,6 +730,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   params->topology = g_topology;
   params->mutex = g_dijkstra_mutex;
 
+  pwospf_lock(rx_lsu_param->sr->ospf_subsys);
   if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) {
     printf("Thread not allocated");
     assert(0);
@@ -802,7 +808,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       }
       pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
-      printf("-$-$-$-$ -> 3");
       free(packet);
     }
 
