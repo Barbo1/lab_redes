@@ -710,6 +710,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
       struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
 
+  /*
       pwospf_lock(rx_lsu_param->sr->ospf_subsys);
       if (entrada_cache) {
         printf("#### -> Found MAC in the cache\n");
@@ -736,6 +737,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
         );
         handle_arpreq (rx_lsu_param->sr, req);
       }
+      */
       pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
       free(packet);
