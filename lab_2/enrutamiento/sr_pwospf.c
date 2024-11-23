@@ -445,11 +445,10 @@ void* send_lsu(void* arg) {
   memset(packet, 0, len);
 
   printf("&?&?&?&??&?&?&??&?&? 1\n");
-
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
-  ether_hdr->ether_type = htons(ethertype_ip);
-
   printf("&?&?&?&??&?&?&??&?&? 2\n");
+  ether_hdr->ether_type = htons(ethertype_ip);
+  printf("&?&?&?&??&?&?&??&?&? 3\n");
 
   /* Inicializo cabezal IP */
   sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t));
@@ -462,8 +461,6 @@ void* send_lsu(void* arg) {
   ip_hdr->ip_off = IP_DF;
   ip_hdr->ip_ttl = 64;
   ip_hdr->ip_sum = ip_cksum(ip_hdr, sizeof(sr_ip_hdr_t));
-  
-  printf("&?&?&?&??&?&?&??&?&? 3\n");
 
   /* Inicializo cabezal de PWOSPF con version 2 y tipo HELLO */
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -471,15 +468,11 @@ void* send_lsu(void* arg) {
   ospf_hdr->type = OSPF_TYPE_LSU;
   ospf_hdr->len = htons(ospf_size);
   ospf_hdr->rid = g_router_id.s_addr;
-  
-  printf("&?&?&?&??&?&?&??&?&? 4\n");
 
   ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
   lsu_hdr->seq = g_sequence_num++;
   lsu_hdr->ttl = 64;
   lsu_hdr->num_adv = lsas;
-  
-  printf("&?&?&?&??&?&?&??&?&? 5\n");
 
   ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
 
