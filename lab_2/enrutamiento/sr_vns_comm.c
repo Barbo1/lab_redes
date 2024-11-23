@@ -579,6 +579,8 @@ int sr_send_packet(struct sr_instance* sr /* borrowed */,
         return -1;
     }
 
+    printf("_>_>_>_>_>_>_>_>_>_>_>_> 1\n");
+
     /* Create packet */
     sr_pkt = (c_packet_header *)malloc(len +
             sizeof(c_packet_header));
@@ -589,6 +591,8 @@ int sr_send_packet(struct sr_instance* sr /* borrowed */,
     memcpy(((uint8_t*)sr_pkt) + sizeof(c_packet_header),
             buf,len);
 
+    printf("_>_>_>_>_>_>_>_>_>_>_>_> 2\n");
+
     /* -- log packet -- */
     sr_log_packet(sr,buf,len);
 
@@ -598,11 +602,15 @@ int sr_send_packet(struct sr_instance* sr /* borrowed */,
         return -1;
     }
 
+    printf("_>_>_>_>_>_>_>_>_>_>_>_> 3\n");
+
     if( write(sr->sockfd, sr_pkt, total_len) < total_len ){
         fprintf(stderr, "Error writing packet\n");
         free(sr_pkt);
         return -1;
     }
+
+    printf("_>_>_>_>_>_>_>_>_>_>_>_> 4\n");
 
     free(sr_pkt);
 
