@@ -605,13 +605,11 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
  *
  *---------------------------------------------------------------------*/
 
-void* sr_handle_pwospf_lsu_packet(void* arg)
-{
+void* sr_handle_pwospf_lsu_packet(void* arg) {
   Debug("-> Entering lsu handling.\n");
   powspf_rx_lsu_param_t* rx_lsu_param = ((powspf_rx_lsu_param_t*)(arg));
 
-  unsigned size = sizeof(sr_ethernet_hdr_t);
-  size += sizeof(sr_ip_hdr_t);
+  unsigned size = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t);
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(rx_lsu_param->packet + size);
   size += sizeof(ospfv2_hdr_t);
   ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(rx_lsu_param->packet + size);
@@ -693,37 +691,28 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       uint8_t * packet = (uint8_t *)malloc(len);
       memcpy(packet, rx_lsu_param->packet, len);
 
+      sr_ethernet_hdr_t * ether_hdr_new = (sr_ethernet_hdr_t *)packet;
       sr_ip_hdr_t * ip_hdr_new = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
       ip_hdr_new->ip_src = elem->ip;
       ip_hdr_new->ip_dst = elem->neighbor_ip;
-      sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
 
-      Debug("\n\nPWOSPF: LSU packet constructed\n");
-
-      print_hdr_eth(packet);
-      print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-      print_hdr_ospf(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-      fprintf(stderr, "LSU header\n");
-      fprintf(stderr, "\tseq: %d\n", lsu_hdr->seq);
-      fprintf(stderr, "\tttl: %d\n", lsu_hdr->ttl);
-      fprintf(stderr, "\tadv: %d\n", lsu_hdr->num_adv);
+      pwospf_lock(rx_lsu_param->sr->ospf_subsys);
 
       struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
-
-  /*
-      pwospf_lock(rx_lsu_param->sr->ospf_subsys);
       if (entrada_cache) {
         printf("#### -> Found MAC in the cache\n");
 
-        memcpy(ether_hdr->ether_shost, elem->addr, ETHER_ADDR_LEN);
-        memcpy(ether_hdr->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
+        memcpy(ether_hdr_new->ether_shost, elem->addr, ETHER_ADDR_LEN);
+        memcpy(ether_hdr_new->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
 
+        /*
         sr_send_packet (
           rx_lsu_param->sr, 
           packet, 
           len, 
           elem->name
         );
+        */
 
       } else {
         printf("#### -> MAC not found\n");
@@ -737,7 +726,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
         );
         handle_arpreq (rx_lsu_param->sr, req);
       }
-      */
+
       pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
       free(packet);
