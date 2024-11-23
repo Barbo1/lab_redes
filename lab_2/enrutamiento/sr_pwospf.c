@@ -512,10 +512,10 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
  *---------------------------------------------------------------------*/
 
 void* send_lsu(void* arg) {
+  /*
   powspf_hello_lsu_param_t* lsu_param = ((powspf_hello_lsu_param_t*)(arg));
   Debug("\n\n()()()()()() -> Constructing and sending a LSU packet for interface %s: \n", lsu_param->interface->name);
 
-  /* Solo envío LSUs si del otro lado hay un router */
   if (lsu_param->interface->neighbor_id == 0) {
     Debug("\nERROR: the interface goes to no router.\n");
     return NULL;
@@ -523,19 +523,14 @@ void* send_lsu(void* arg) {
 
   uint32_t ipDst = lsu_param->interface->neighbor_ip;
 
-  /* Construcción del paquete. */
   uint8_t * packet;
   unsigned len = construir_packete_lsu (&packet, lsu_param->sr, lsu_param->interface, 64);
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
 
   Debug("\n\nPWOSPF: LSU packet constructed\n");
 
-  /* envio del paquete.
-   * */
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(lsu_param->sr->cache), ipDst);
 
-  /* Se conoce la MAC. 
-   * */
   pwospf_lock(lsu_param->sr->ospf_subsys);
   if (entrada_cache) {
     printf("#### -> Found MAC in the cache\n");
@@ -543,8 +538,6 @@ void* send_lsu(void* arg) {
     memcpy(ether_hdr->ether_shost, lsu_param->interface->addr, ETHER_ADDR_LEN);
     memcpy(ether_hdr->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
 
-    /* envio del paquete.
-     * */
     sr_send_packet (
       lsu_param->sr, 
       packet, 
@@ -554,8 +547,6 @@ void* send_lsu(void* arg) {
 
     free(entrada_cache);
 
-    /* NO se conoce la MAC. 
-     * */
   } else {
     printf("#### -> MAC not found\n");
 
@@ -572,7 +563,7 @@ void* send_lsu(void* arg) {
 
   free(packet);
   printf("#### -> Packet Sent.\n");
-
+*/
   return NULL;
 } /* -- send_lsu -- */
 
