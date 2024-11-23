@@ -669,7 +669,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   params->mutex = g_dijkstra_mutex;
 
   pwospf_lock(rx_lsu_param->sr->ospf_subsys);
-  if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, &params)) {
+  if (pthread_create(&g_dijkstra_thread, NULL, run_dijkstra, params)) {
     printf("Thread not allocated");
     assert(0);
   } else {
@@ -684,7 +684,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   }
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
 
-/*
   struct sr_if * elem = rx_lsu_param->sr->if_list;
   while (elem) {
     if (elem->ip != rx_lsu_param->rx_if->ip && elem->neighbor_id != 0) {
@@ -744,7 +743,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
     elem = elem->next;
   }
-*/
   return NULL;
 } /* -- sr_handle_pwospf_lsu_packet -- */
 
