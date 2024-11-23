@@ -351,9 +351,9 @@ void* send_hello_packet(void* arg) {
   ospf_hdr->version = OSPF_V2;
   ospf_hdr->type = OSPF_TYPE_HELLO;
   ospf_hdr->len = htons(res_len);
-  ospf_hdr->rid = htonl(g_router_id.s_addr);
-  ospf_hello_hdr->nmask = htonl(hello_param->interface->mask);
-  ospf_hello_hdr->helloint = htons(OSPF_DEFAULT_HELLOINT);
+  ospf_hdr->rid = g_router_id.s_addr;
+  ospf_hello_hdr->nmask = hello_param->interface->mask;
+  ospf_hello_hdr->helloint = OSPF_DEFAULT_HELLOINT;
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, res_len);
 
   printf("\n$$$$ -> Packet Completed.\n");
@@ -684,8 +684,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   }
 
   int i = 0;
-  printf("-$-$-$-$ -> -1");
-  printf("cantidad de iteraciones: %d", lsu_hdr->num_adv);
   while (i < lsu_hdr->num_adv) {
     printf("iteracion: %d", i);
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
@@ -706,13 +704,11 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       lsu_hdr->seq
     );
     pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
-    printf("-$-$-$-$ -> H");
 
     i++;
     lsa_hdr++;
   }
 
-  printf("-$-$-$-$ -> 0");
   dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
   params->sr = rx_lsu_param->sr;
   params->rid = g_router_id;
@@ -735,10 +731,8 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   }
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
 
-  printf("-$-$-$-$ -> 1");
   struct sr_if * elem = rx_lsu_param->sr->if_list;
   while (elem) {
-    printf("-$-$-$-$ -> 2");
     if (elem->ip != rx_lsu_param->rx_if->ip && elem->neighbor_id != 0) {
 
       /* Construcción del paquete. 
