@@ -428,18 +428,6 @@ void* send_all_lsu(void* arg) {
  *
  *---------------------------------------------------------------------*/
 
-unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struct sr_if* interface, uint8_t ttl) {
-
-  return len;
-}
-
-/*---------------------------------------------------------------------
- * Method: send_lsu
- *
- * Construye y envía paquetes LSU a través de una interfaz específica
- *
- *---------------------------------------------------------------------*/
-
 void* send_lsu(void* arg) {
   powspf_hello_lsu_param_t* lsu_param = ((powspf_hello_lsu_param_t*)(arg));
   Debug("\n\n()()()()()() -> Constructing and sending a LSU packet for interface %s: \n", lsu_param->interface->name);
