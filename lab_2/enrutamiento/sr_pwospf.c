@@ -204,7 +204,6 @@ void* check_neighbors_life(void* arg) {
     usleep(1000000);
 
     pwospf_lock(sr->ospf_subsys);
-    /*
     struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors), * elem;
 
     while ((elem = vecinos_muertos)) {
@@ -219,7 +218,6 @@ void* check_neighbors_life(void* arg) {
 
       free(elem);
     }
-    */
 
     pwospf_unlock(sr->ospf_subsys);
   }
@@ -247,7 +245,6 @@ void* check_topology_entries_age(void* arg) {
     printf("\n->-->>--->>>---->>>>----->>>>>>\n");
 
     pwospf_lock(sr->ospf_subsys);
-    /*
 
     if (check_topology_age(g_topology)) {
       dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
@@ -266,7 +263,6 @@ void* check_topology_entries_age(void* arg) {
 
     print_topolgy_table(g_topology);
     sr_print_routing_table(sr);
-    */
     pwospf_unlock(sr->ospf_subsys);
   }
 
@@ -289,7 +285,7 @@ void* send_hellos(void* arg) {
     usleep(1000000);
 
     pwospf_lock(sr->ospf_subsys);
-  
+/*  
     struct sr_if * inter = sr->if_list;
     while (inter) {
       if ((inter->helloint)++ < OSPF_NEIGHBOR_TIMEOUT) {
@@ -310,7 +306,7 @@ void* send_hellos(void* arg) {
       }
       inter = inter->next;
     }
-
+*/
     pwospf_unlock(sr->ospf_subsys);
   };
 
@@ -400,13 +396,8 @@ void* send_all_lsu(void* arg) {
 
     /* OSPF_DEFAULT_LSUINT *  */
     usleep(1000000);
-    
-    printf("\n->-->>--->>>---->>>>----->>>>>>");
-    printf("\n->-->>--->>> all lsu.");
-    printf("\n->-->>--->>>---->>>>----->>>>>>\n");
 
     pwospf_lock(sr->ospf_subsys);
-/*
     struct sr_if * inter = sr->if_list;
     if (inter) {
       g_sequence_num++;
@@ -425,7 +416,6 @@ void* send_all_lsu(void* arg) {
         inter = inter->next;
       }
     }
-    */
     pwospf_unlock(sr->ospf_subsys);
   };
 
