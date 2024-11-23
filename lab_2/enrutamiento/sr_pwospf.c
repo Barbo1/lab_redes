@@ -444,23 +444,24 @@ void* send_lsu(void* arg) {
   uint8_t * packet = (uint8_t *)malloc(len);
   memset(packet, 0, len);
 
-  printf("&?&?&?&??&?&?&??&?&? 1\n");
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
-  printf("&?&?&?&??&?&?&??&?&? 2\n");
   ether_hdr->ether_type = htons(ethertype_ip);
-  printf("&?&?&?&??&?&?&??&?&? 3\n");
 
   /* Inicializo cabezal IP */
+  printf("&?&?&?&??&?&?&??&?&? 1\n");
   sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t));
   ip_hdr->ip_v = 4;
   ip_hdr->ip_hl = 5;
   ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
   ip_hdr->ip_p = ip_protocol_ospfv2;
   ip_hdr->ip_dst = ipDst;
+  printf("&?&?&?&??&?&?&??&?&? 2\n");
   ip_hdr->ip_src = lsu_param->interface->ip;
   ip_hdr->ip_off = IP_DF;
   ip_hdr->ip_ttl = 64;
+  printf("&?&?&?&??&?&?&??&?&? 3\n");
   ip_hdr->ip_sum = ip_cksum(ip_hdr, sizeof(sr_ip_hdr_t));
+  printf("&?&?&?&??&?&?&??&?&? 4\n");
 
   /* Inicializo cabezal de PWOSPF con version 2 y tipo HELLO */
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
