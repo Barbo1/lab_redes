@@ -662,7 +662,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     lsa_hdr++;
   }
 
-/*
   dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
   params->sr = rx_lsu_param->sr;
   params->rid = g_router_id;
@@ -685,6 +684,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   }
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, size);
 
+/*
   struct sr_if * elem = rx_lsu_param->sr->if_list;
   while (elem) {
     if (elem->ip != rx_lsu_param->rx_if->ip && elem->neighbor_id != 0) {
