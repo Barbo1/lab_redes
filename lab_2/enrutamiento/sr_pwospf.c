@@ -492,7 +492,7 @@ void* send_lsu(void* arg) {
   Debug("\n\nPWOSPF: LSU packet constructed\n");
 
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(lsu_param->sr->cache), ipDst);
-/*
+
   pwospf_lock(lsu_param->sr->ospf_subsys);
   if (entrada_cache) {
     printf("#### -> Found MAC in the cache\n");
@@ -522,7 +522,7 @@ void* send_lsu(void* arg) {
     handle_arpreq (lsu_param->sr, req);
   }
   pwospf_unlock(lsu_param->sr->ospf_subsys);
-  */
+  
   free(packet);
   printf("#### -> Packet Sent.\n");
 
