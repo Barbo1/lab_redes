@@ -324,7 +324,7 @@ void* send_hello_packet(void* arg) {
   powspf_hello_lsu_param_t* hello_param = ((powspf_hello_lsu_param_t*)(arg));
 
   unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t);
-  uint8_t * packet = (uint8_t *)malloc(len * sizeof(uint8_t));
+  uint8_t * packet = (uint8_t *)malloc(len);
   memset(packet, 0, len);
 
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
@@ -345,15 +345,16 @@ void* send_hello_packet(void* arg) {
   ip_hdr->ip_sum = ip_cksum(ip_hdr, sizeof(sr_ip_hdr_t));
 
   /* Inicializo cabezal de PWOSPF con version 2 y tipo HELLO */
-  ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  unsigned res_len = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t);
+  ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(packet + len - res_len);
   ospfv2_hello_hdr_t * ospf_hello_hdr = (ospfv2_hello_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
   ospf_hdr->version = OSPF_V2;
   ospf_hdr->type = OSPF_TYPE_HELLO;
-  ospf_hdr->len = htons(sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t));
-  ospf_hdr->rid = g_router_id.s_addr;
-  ospf_hello_hdr->nmask = hello_param->interface->mask;
-  ospf_hello_hdr->helloint = OSPF_DEFAULT_HELLOINT;
-  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t));
+  ospf_hdr->len = htons(res_len);
+  ospf_hdr->rid = htonl(g_router_id.s_addr);
+  ospf_hello_hdr->nmask = htonl(hello_param->interface->mask);
+  ospf_hello_hdr->helloint = htons(OSPF_DEFAULT_HELLOINT);
+  ospf_hdr->csum = ospfv2_cksum(ospf_hdr, res_len);
 
   printf("\n$$$$ -> Packet Completed.\n");
   printf("\n$$$ -> Packet Info:\n");
@@ -363,7 +364,6 @@ void* send_hello_packet(void* arg) {
 
   /* envio del paquete.
    * */
-  /*
   pwospf_lock(hello_param->sr->ospf_subsys);
   sr_send_packet (
     hello_param->sr, 
@@ -372,7 +372,7 @@ void* send_hello_packet(void* arg) {
     hello_param->interface->name
   );
   pwospf_unlock(hello_param->sr->ospf_subsys);
-  */
+
   free(packet);
 
   printf("\n$$$$ -> Packet Sent.\n");
