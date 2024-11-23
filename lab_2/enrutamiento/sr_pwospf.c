@@ -285,7 +285,7 @@ void* send_hellos(void* arg) {
     usleep(1000000);
 
     pwospf_lock(sr->ospf_subsys);
-/*  
+  
     struct sr_if * inter = sr->if_list;
     while (inter) {
       if ((inter->helloint)++ < OSPF_NEIGHBOR_TIMEOUT) {
@@ -293,20 +293,18 @@ void* send_hellos(void* arg) {
         params->interface = inter;
         params->sr = sr;
         
-        printf("\n->-->>--->>> Por Esta Parte");
         if (pthread_create(&g_hello_packet_thread, NULL, send_hello_packet, params)) {
           printf("Thread not allocated");
           assert(0);
         } else {
           pthread_detach(g_hello_packet_thread);
         }
-        printf("\n->-->>--->>> Salio");
 
         inter->helloint = 0;
       }
       inter = inter->next;
     }
-*/
+
     pwospf_unlock(sr->ospf_subsys);
   };
 
@@ -365,6 +363,7 @@ void* send_hello_packet(void* arg) {
 
   /* envio del paquete.
    * */
+  /*
   pwospf_lock(hello_param->sr->ospf_subsys);
   sr_send_packet (
     hello_param->sr, 
@@ -373,7 +372,7 @@ void* send_hello_packet(void* arg) {
     hello_param->interface->name
   );
   pwospf_unlock(hello_param->sr->ospf_subsys);
-
+  */
   free(packet);
 
   printf("\n$$$$ -> Packet Sent.\n");
