@@ -429,14 +429,38 @@ void* send_all_lsu(void* arg) {
  *---------------------------------------------------------------------*/
 
 unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struct sr_if* interface, uint8_t ttl) {
-  unsigned lsas = count_routes(sr);
 
+  return len;
+}
+
+/*---------------------------------------------------------------------
+ * Method: send_lsu
+ *
+ * Construye y envía paquetes LSU a través de una interfaz específica
+ *
+ *---------------------------------------------------------------------*/
+
+void* send_lsu(void* arg) {
+  powspf_hello_lsu_param_t* lsu_param = ((powspf_hello_lsu_param_t*)(arg));
+  Debug("\n\n()()()()()() -> Constructing and sending a LSU packet for interface %s: \n", lsu_param->interface->name);
+
+  if (lsu_param->interface->neighbor_id == 0) {
+    Debug("\nERROR: the interface goes to no router.\n");
+    return NULL;
+  }
+
+  printf("&?&?&?&??&?&?&??&?&? 1\n");
+
+  uint32_t ipDst = lsu_param->interface->neighbor_ip;
+  unsigned lsas = count_routes(lsu_param->sr);
   unsigned ospf_size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
   unsigned len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + ospf_size;
-  *packet = (uint8_t *)malloc(len);
+  uint8_t * packet = (uint8_t *)malloc(len);
   memset(packet, 0, len);
 
-  sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)*packet;
+  printf("&?&?&?&??&?&?&??&?&? 2\n");
+
+  sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
   ether_hdr->ether_type = htons(ethertype_ip);
 
   /* Inicializo cabezal IP */
@@ -445,10 +469,10 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   ip_hdr->ip_hl = 5;
   ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
   ip_hdr->ip_p = ip_protocol_ospfv2;
-  ip_hdr->ip_dst = interface->neighbor_ip;
-  ip_hdr->ip_src = interface->ip;
+  ip_hdr->ip_dst = ipDst;
+  ip_hdr->ip_src = lsu_param->interface->ip;
   ip_hdr->ip_off = IP_DF;
-  ip_hdr->ip_ttl = ttl;
+  ip_hdr->ip_ttl = 64;
   ip_hdr->ip_sum = ip_cksum(ip_hdr, sizeof(sr_ip_hdr_t));
 
   /* Inicializo cabezal de PWOSPF con version 2 y tipo HELLO */
@@ -465,23 +489,27 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
 
   ospfv2_lsa_t * lsa_part = (ospfv2_lsa_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t));
 
-  pwospf_lock(sr->ospf_subsys);
-  struct sr_rt * elem = sr->routing_table;
+  printf("&?&?&?&??&?&?&??&?&? 3\n");
+
+  pwospf_lock(lsu_param->sr->ospf_subsys);
+  struct sr_rt * elem = lsu_param->sr->routing_table;
   while (elem && (elem->admin_dst <= 1)) {
     lsa_part->subnet = elem->dest.s_addr;
     lsa_part->mask = elem->mask.s_addr;
-    lsa_part->rid = sr_get_interface(sr, elem->interface)->neighbor_id;
+    lsa_part->rid = sr_get_interface(lsu_param->sr, elem->interface)->neighbor_id;
 
     elem = elem->next;
     lsa_part++;
   }
-  pwospf_unlock(sr->ospf_subsys);
+  pwospf_unlock(lsu_param->sr->ospf_subsys);
 
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, ospf_size);
 
-  print_hdr_eth(*packet);
-  print_hdr_ip(*packet + sizeof(sr_ethernet_hdr_t));
-  print_hdr_ospf(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  printf("&?&?&?&??&?&?&??&?&? 4\n");
+
+  print_hdr_eth(packet);
+  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+  print_hdr_ospf(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
   fprintf(stderr, "LSU header\n");
   fprintf(stderr, "\tseq: %d\n", lsu_hdr->seq);
   fprintf(stderr, "\tttl: %d\n", lsu_hdr->ttl);
@@ -501,36 +529,10 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
     i++;
   }
 
-  return len;
-}
-
-/*---------------------------------------------------------------------
- * Method: send_lsu
- *
- * Construye y envía paquetes LSU a través de una interfaz específica
- *
- *---------------------------------------------------------------------*/
-
-void* send_lsu(void* arg) {
-  /*
-  powspf_hello_lsu_param_t* lsu_param = ((powspf_hello_lsu_param_t*)(arg));
-  Debug("\n\n()()()()()() -> Constructing and sending a LSU packet for interface %s: \n", lsu_param->interface->name);
-
-  if (lsu_param->interface->neighbor_id == 0) {
-    Debug("\nERROR: the interface goes to no router.\n");
-    return NULL;
-  }
-
-  uint32_t ipDst = lsu_param->interface->neighbor_ip;
-
-  uint8_t * packet;
-  unsigned len = construir_packete_lsu (&packet, lsu_param->sr, lsu_param->interface, 64);
-  sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
-
   Debug("\n\nPWOSPF: LSU packet constructed\n");
 
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(lsu_param->sr->cache), ipDst);
-
+/*
   pwospf_lock(lsu_param->sr->ospf_subsys);
   if (entrada_cache) {
     printf("#### -> Found MAC in the cache\n");
@@ -560,10 +562,10 @@ void* send_lsu(void* arg) {
     handle_arpreq (lsu_param->sr, req);
   }
   pwospf_unlock(lsu_param->sr->ospf_subsys);
-
+*/
   free(packet);
   printf("#### -> Packet Sent.\n");
-*/
+
   return NULL;
 } /* -- send_lsu -- */
 
