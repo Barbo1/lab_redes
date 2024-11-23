@@ -635,7 +635,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     Debug("-> PWOSPF: LSU Packet dropped, repeated sequence number\n");
     return NULL;
   }
-/*
+
   int i = 0;
   while (i < lsu_hdr->num_adv) {
     printf("iteracion: %d", i);
@@ -662,6 +662,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     lsa_hdr++;
   }
 
+/*
   dijkstra_param_t * params = (dijkstra_param_t *)malloc(sizeof(dijkstra_param_t));
   params->sr = rx_lsu_param->sr;
   params->rid = g_router_id;
