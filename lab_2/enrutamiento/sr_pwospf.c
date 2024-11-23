@@ -202,23 +202,22 @@ void* check_neighbors_life(void* arg) {
 
   while(1) {
     usleep(1000000);
-    
-    printf("\n->-->>--->>>---->>>>----->>>>>>");
-    printf("\n->-->>--->>> Se ejecuta neighbor.");
-    printf("\n->-->>--->>>---->>>>----->>>>>>\n");
 
     pwospf_lock(sr->ospf_subsys);
 
-    struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors);
+    struct ospfv2_neighbor* vecinos_muertos = check_neighbors_alive(g_neighbors), * elem;
 
-    while (vecinos_muertos) {
+    while ((elem = vecinos_muertos)) {
+      vecinos_muertos = vecinos_muertos->next;
+
       struct sr_if * inter = sr->if_list;
-      while (inter->neighbor_id != vecinos_muertos->neighbor_id.s_addr)
+      while (inter->neighbor_id != elem->neighbor_id.s_addr)
         inter = inter->next;
       inter->helloint = 0;
       inter->neighbor_ip = 0;
       inter->neighbor_id = 0;
-      vecinos_muertos = vecinos_muertos->next;
+
+      free(elem);
     }
 
     pwospf_unlock(sr->ospf_subsys);
@@ -287,11 +286,8 @@ void* send_hellos(void* arg) {
   while(1) {
     usleep(1000000);
 
-    printf("\n->-->>--->>>---->>>>----->>>>>>");
-    printf("\n->-->>--->>> Se ejecuta hellos.");
-    printf("\n->-->>--->>>---->>>>----->>>>>>\n");
-
     pwospf_lock(sr->ospf_subsys);
+
     struct sr_if * inter = sr->if_list;
     while (inter) {
       if ((inter->helloint)++ < OSPF_NEIGHBOR_TIMEOUT) {
@@ -312,6 +308,7 @@ void* send_hellos(void* arg) {
       }
       inter = inter->next;
     }
+
     pwospf_unlock(sr->ospf_subsys);
   };
 
@@ -332,6 +329,7 @@ void* send_hello_packet(void* arg) {
 
   unsigned int len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t);
   uint8_t * packet = (uint8_t *)malloc(len * sizeof(uint8_t));
+  memset(packet, 0, len);
 
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)packet;
   memcpy(ether_hdr->ether_shost, hello_param->interface->addr, ETHER_ADDR_LEN);
@@ -342,10 +340,8 @@ void* send_hello_packet(void* arg) {
   sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   ip_hdr->ip_v = 4;
   ip_hdr->ip_hl = 5;
-  ip_hdr->ip_tos = 0;
   ip_hdr->ip_len = htons(sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t));
   ip_hdr->ip_p = ip_protocol_ospfv2;
-  ip_hdr->ip_id = 0;
   ip_hdr->ip_dst = htonl(OSPF_AllSPFRouters);
   ip_hdr->ip_src = hello_param->interface->ip;
   ip_hdr->ip_off = htons(IP_DF);
@@ -359,11 +355,7 @@ void* send_hello_packet(void* arg) {
   ospf_hdr->type = OSPF_TYPE_HELLO;
   ospf_hdr->len = htons(sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t));
   ospf_hdr->rid = g_router_id.s_addr;
-  ospf_hdr->aid = 0;
-  ospf_hdr->autype = 0;
-  ospf_hdr->audata = 0;
   ospf_hello_hdr->nmask = hello_param->interface->mask;
-  ospf_hello_hdr->padding = 0;
   ospf_hello_hdr->helloint = OSPF_DEFAULT_HELLOINT;
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t));
 
@@ -449,6 +441,7 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   unsigned ospf_size = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_lsu_hdr_t) + lsas * sizeof(ospfv2_lsa_t);
   unsigned len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + ospf_size;
   *packet = (uint8_t *)malloc(len);
+  memset(packet, 0, len);
 
   sr_ethernet_hdr_t * ether_hdr = (sr_ethernet_hdr_t *)*packet;
   ether_hdr->ether_type = htons(ethertype_ip);
@@ -457,15 +450,12 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t));
   ip_hdr->ip_v = 4;
   ip_hdr->ip_hl = 5;
-  ip_hdr->ip_tos = 0;
   ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
   ip_hdr->ip_p = ip_protocol_ospfv2;
-  ip_hdr->ip_id = 0;
   ip_hdr->ip_dst = interface->neighbor_ip;
   ip_hdr->ip_src = interface->ip;
   ip_hdr->ip_off = IP_DF;
   ip_hdr->ip_ttl = ttl;
-  ip_hdr->ip_sum = 0;
   ip_hdr->ip_sum = ip_cksum(ip_hdr, sizeof(sr_ip_hdr_t));
 
   /* Inicializo cabezal de PWOSPF con version 2 y tipo HELLO */
@@ -474,13 +464,9 @@ unsigned construir_packete_lsu (uint8_t ** packet, struct sr_instance* sr, struc
   ospf_hdr->type = OSPF_TYPE_LSU;
   ospf_hdr->len = htons(ospf_size);
   ospf_hdr->rid = g_router_id.s_addr;
-  ospf_hdr->aid = 0;
-  ospf_hdr->autype = 0;
-  ospf_hdr->audata = 0;
 
   ospfv2_lsu_hdr_t * lsu_hdr = (ospfv2_lsu_hdr_t *)(*packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
-  lsu_hdr->unused = 0;
-  lsu_hdr->seq = g_sequence_num;
+  lsu_hdr->seq = g_sequence_num++;
   lsu_hdr->ttl = 64;
   lsu_hdr->num_adv = lsas;
 
