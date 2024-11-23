@@ -635,7 +635,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
     Debug("-> PWOSPF: LSU Packet dropped, repeated sequence number\n");
     return NULL;
   }
-
+/*
   int i = 0;
   while (i < lsu_hdr->num_adv) {
     printf("iteracion: %d", i);
@@ -688,8 +688,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
   while (elem) {
     if (elem->ip != rx_lsu_param->rx_if->ip && elem->neighbor_id != 0) {
 
-      /* Construcción del paquete. 
-       * */
       uint32_t ipDst = elem->neighbor_ip;
       unsigned len = rx_lsu_param->length;
       uint8_t * packet = (uint8_t *)malloc(len);
@@ -709,10 +707,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
       fprintf(stderr, "\tseq: %d\n", lsu_hdr->seq);
       fprintf(stderr, "\tttl: %d\n", lsu_hdr->ttl);
       fprintf(stderr, "\tadv: %d\n", lsu_hdr->num_adv);
-
-      /* * * * * * * * * * * 
-       * envio del paquete *
-       * * * * * * * * * * */
 
       struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
 
@@ -749,7 +743,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg)
 
     elem = elem->next;
   }
-
+*/
   return NULL;
 } /* -- sr_handle_pwospf_lsu_packet -- */
 
