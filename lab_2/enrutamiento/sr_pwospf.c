@@ -628,12 +628,11 @@ void* sr_handle_pwospf_lsu_packet(void* arg) {
 
   int i = 0;
   while (i < lsu_hdr->num_adv) {
-    printf("iteracion: %d", i);
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
     router_id.s_addr = ospf_hdr->rid;
-    neighbor_id.s_addr = lsa_hdr->rid;
     subnet.s_addr = lsa_hdr->subnet;
     mask.s_addr = lsa_hdr->mask;
+    neighbor_id.s_addr = lsa_hdr->rid;
     next_hop.s_addr = rx_lsu_param->rx_if->neighbor_ip;
 
     pwospf_lock(rx_lsu_param->sr->ospf_subsys);
