@@ -430,7 +430,6 @@ void* send_all_lsu(void* arg) {
 
 void* send_lsu(void* arg) {
   powspf_hello_lsu_param_t* lsu_param = ((powspf_hello_lsu_param_t*)(arg));
-  Debug("\n\n()()()()()() -> Constructing and sending a LSU packet for interface %s: \n", lsu_param->interface->name);
 
   if (lsu_param->interface->neighbor_id == 0) {
     Debug("\nERROR: the interface goes to no router.\n");
@@ -448,9 +447,7 @@ void* send_lsu(void* arg) {
   ether_hdr->ether_type = htons(ethertype_ip);
 
   /* Inicializo cabezal IP */
-  printf("&?&?&?&??&?&?&??&?&? 1\n");
   sr_ip_hdr_t * ip_hdr = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
-  printf("&?&?&?&??&?&?&??&?&? 2\n");
   ip_hdr->ip_v = 4;
   ip_hdr->ip_hl = 5;
   ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
@@ -566,29 +563,24 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   res.s_addr = ospf_hdr->rid;
   refresh_neighbors_alive(g_neighbors, res);
 
-  Debug("-> 1\n");
   if (rx_if->neighbor_id == 0) {
     rx_if->neighbor_id = ospf_hdr->rid;
     rx_if->neighbor_ip = ip_hdr->ip_src;
 
-    Debug("-> 2\n");
     g_sequence_num++;
     struct sr_if * elem = sr->if_list;
     while (elem) {
-      Debug("-> interfaz: %s\n", elem->name);
       if (elem->ip != rx_if->ip) {
         powspf_hello_lsu_param_t * params = (powspf_hello_lsu_param_t *)malloc(sizeof(powspf_hello_lsu_param_t));
         params->interface = elem;
         params->sr = sr;
 
-        Debug("-> 3\n");
         if (pthread_create(&g_rx_lsu_thread, NULL, send_lsu, params)) {
           printf("Thread not allocated");
           assert(0);
         } else {
           pthread_detach(g_rx_lsu_thread);
         }
-        Debug("-> 4\n");
       }
       elem = elem->next;
     }
@@ -705,14 +697,12 @@ void* sr_handle_pwospf_lsu_packet(void* arg) {
         memcpy(ether_hdr_new->ether_shost, elem->addr, ETHER_ADDR_LEN);
         memcpy(ether_hdr_new->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
 
-        /*
         sr_send_packet (
           rx_lsu_param->sr, 
           packet, 
           len, 
           elem->name
         );
-        */
 
       } else {
         printf("#### -> MAC not found\n");

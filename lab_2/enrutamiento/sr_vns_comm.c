@@ -613,6 +613,8 @@ int sr_send_packet(struct sr_instance* sr /* borrowed */,
     printf("_>_>_>_>_>_>_>_>_>_>_>_> 4\n");
 
     free(sr_pkt);
+    
+    printf("_>_>_>_>_>_>_>_>_>_>_>_> 5\n");
 
     return 0;
 } /* -- sr_send_packet -- */
