@@ -347,7 +347,7 @@ void* send_hello_packet(void* arg) {
   /* Inicializo cabezal de PWOSPF con version 2 y tipo HELLO */
   unsigned res_len = sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t);
   ospfv2_hdr_t * ospf_hdr = (ospfv2_hdr_t *)(packet + len - res_len);
-  ospfv2_hello_hdr_t * ospf_hello_hdr = (ospfv2_hello_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t));
+  ospfv2_hello_hdr_t * ospf_hello_hdr = (ospfv2_hello_hdr_t *)(packet + len - sizeof(ospfv2_hello_hdr_t));
   ospf_hdr->version = OSPF_V2;
   ospf_hdr->type = OSPF_TYPE_HELLO;
   ospf_hdr->len = htons(res_len);
@@ -358,9 +358,6 @@ void* send_hello_packet(void* arg) {
 
   printf("\n$$$$ -> Packet Completed.\n");
   printf("\n$$$ -> Packet Info:\n");
-  print_hdr_eth(packet);
-  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-  print_hdr_ospf(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
   /* envio del paquete.
    * */
@@ -627,7 +624,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg) {
   }
 
   int i = 0;
-  while (i < lsu_hdr->num_adv) {
+  while (i++ < lsu_hdr->num_adv) {
     struct in_addr router_id, subnet, mask, neighbor_id, next_hop;
     router_id.s_addr = ospf_hdr->rid;
     subnet.s_addr = lsa_hdr->subnet;
@@ -647,7 +644,6 @@ void* sr_handle_pwospf_lsu_packet(void* arg) {
     );
     pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
-    i++;
     lsa_hdr++;
   }
 
@@ -666,8 +662,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg) {
   }
   pwospf_unlock(rx_lsu_param->sr->ospf_subsys);
 
-  lsu_hdr->ttl--;
-  if (lsu_hdr->ttl <= 0) {
+  if (--lsu_hdr->ttl <= 0) {
     Debug("-> PWOSPF: LSU Packet dropped, tll insufficient.\n");
     return NULL;
   }
@@ -678,17 +673,18 @@ void* sr_handle_pwospf_lsu_packet(void* arg) {
     if (elem->ip != rx_lsu_param->rx_if->ip && elem->neighbor_id != 0) {
 
       uint32_t ipDst = elem->neighbor_ip;
+
       unsigned len = rx_lsu_param->length;
       uint8_t * packet = (uint8_t *)malloc(len);
       memcpy(packet, rx_lsu_param->packet, len);
 
-      sr_ethernet_hdr_t * ether_hdr_new = (sr_ethernet_hdr_t *)packet;
       sr_ip_hdr_t * ip_hdr_new = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
       ip_hdr_new->ip_src = elem->ip;
-      ip_hdr_new->ip_dst = elem->neighbor_ip;
+      ip_hdr_new->ip_dst = ipDst;
 
       pwospf_lock(rx_lsu_param->sr->ospf_subsys);
 
+      sr_ethernet_hdr_t * ether_hdr_new = (sr_ethernet_hdr_t *)packet;
       struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(rx_lsu_param->sr->cache), ipDst);
       if (entrada_cache) {
         printf("#### -> Found MAC in the cache\n");

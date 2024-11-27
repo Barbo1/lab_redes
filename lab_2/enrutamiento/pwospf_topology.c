@@ -65,9 +65,7 @@ uint8_t check_topology_age(struct pwospf_topology_entry* first_entry)
     return deleted;
 }
 
-void refresh_topology_entry(struct pwospf_topology_entry* first_entry, struct in_addr router_id, struct in_addr net_num, struct in_addr net_mask,
-    struct in_addr neighbor_id, struct in_addr next_hop, uint16_t sequence_num)
-{
+void refresh_topology_entry(struct pwospf_topology_entry* first_entry, struct in_addr router_id, struct in_addr net_num, struct in_addr net_mask, struct in_addr neighbor_id, struct in_addr next_hop, uint16_t sequence_num) {
     struct pwospf_topology_entry* ptr = first_entry->next;
     while(ptr != NULL)
     {
