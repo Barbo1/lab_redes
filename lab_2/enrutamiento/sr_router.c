@@ -151,12 +151,6 @@ void sr_send_icmp_error_packet (
     );
 
     printf("#### -> Packet Sent.\n");
-    
-    printf("### -> Packet Info:\n");
-    print_hdr_eth(packet);
-    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-    printf("--------------------------------------\n");
 
     free(entrada_cache);
 
@@ -172,11 +166,6 @@ void sr_send_icmp_error_packet (
       packet_size, 
       mine_interface->name
     );
-
-    printf("### -> Packet Info:\n");
-    print_hdr_eth(packet);
-    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
     handle_arpreq (sr, req);
   }
@@ -369,7 +358,6 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   
   printf("#### -> Niether of my interfaces match.\n");
 
-  pthread_mutex_lock(&sr->ospf_subsys->lock);
   struct sr_rt * matched_rt = find_st_entry (sr, ip_to_packet);
 
   /* No pertenece a la routing table. */
@@ -441,7 +429,6 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   }
 
   free(new_packet);
-  pthread_mutex_unlock(&sr->ospf_subsys->lock);
 
   return;
 }
