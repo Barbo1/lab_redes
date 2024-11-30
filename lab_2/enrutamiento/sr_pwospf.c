@@ -464,13 +464,15 @@ void* send_lsu(void* arg) {
 
   pwospf_lock(lsu_param->sr->ospf_subsys);
   struct sr_rt * elem = lsu_param->sr->routing_table;
-  while (elem && (elem->admin_dst <= 1)) {
-    lsa_part->subnet = elem->dest.s_addr;
-    lsa_part->mask = elem->mask.s_addr;
-    lsa_part->rid = sr_get_interface(lsu_param->sr, elem->interface)->neighbor_id;
+  while (elem) {
+    if (elem->admin_dst <= 1) {
+      lsa_part->subnet = elem->dest.s_addr;
+      lsa_part->mask = elem->mask.s_addr;
+      lsa_part->rid = sr_get_interface(lsu_param->sr, elem->interface)->neighbor_id;
 
-    elem = elem->next;
-    lsa_part++;
+      elem = elem->next;
+      lsa_part++;
+    }
   }
   pwospf_unlock(lsu_param->sr->ospf_subsys);
 
@@ -554,6 +556,15 @@ void sr_handle_pwospf_hello_packet(struct sr_instance* sr, uint8_t* packet, unsi
   refresh_neighbors_alive(g_neighbors, res);
 
   if (rx_if->neighbor_id == 0) {
+    printf("\n\n-------------------");
+    printf("\n-------------------");
+    printf("\npuse una nueva ip: ");
+    print_addr_ip_int(ip_hdr->ip_src);
+    printf("\ncon esta id: ");
+    print_addr_ip_int(ospf_hdr->rid);
+    printf("\n-------------------");
+    printf("\n-------------------");
+
     rx_if->neighbor_id = ospf_hdr->rid;
     rx_if->neighbor_ip = ip_hdr->ip_src;
 
