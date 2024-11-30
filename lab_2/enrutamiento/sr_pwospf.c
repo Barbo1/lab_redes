@@ -630,7 +630,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg) {
     subnet.s_addr = lsa_hdr->subnet;
     mask.s_addr = lsa_hdr->mask;
     neighbor_id.s_addr = lsa_hdr->rid;
-    next_hop.s_addr = rx_lsu_param->rx_if->neighbor_ip;
+    next_hop.s_addr = rx_lsu_param->rx_if->ip;
 
     pwospf_lock(rx_lsu_param->sr->ospf_subsys);
     refresh_topology_entry(
