@@ -442,8 +442,8 @@ void* send_lsu(void* arg) {
   ip_hdr->ip_hl = 5;
   ip_hdr->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
   ip_hdr->ip_p = ip_protocol_ospfv2;
-  ip_hdr->ip_dst = ipDst;
-  ip_hdr->ip_src = lsu_param->interface->ip;
+  ip_hdr->ip_dst = htonl(ipDst);
+  ip_hdr->ip_src = htonl(lsu_param->interface->ip);
   ip_hdr->ip_off = IP_DF;
   ip_hdr->ip_ttl = 64;
   ip_hdr->ip_sum = ip_cksum(ip_hdr, sizeof(sr_ip_hdr_t));
