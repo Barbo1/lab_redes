@@ -128,6 +128,14 @@ void sr_send_icmp_error_packet (
   packet_icmp->unused = 0;
   memcpy (packet_icmp->data, ipPacket, sizeof (sr_ip_hdr_t) + 8);
   packet_icmp->icmp_sum = icmp3_cksum (packet_icmp, sizeof (sr_icmp_t3_hdr_t));
+
+  print_hdr_eth(packet);
+  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+  print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+
+  if (mine_interface->ip == ipDst) {
+    assert(1 == 2);
+  }
   
   /* envio del paquete.
    * */
