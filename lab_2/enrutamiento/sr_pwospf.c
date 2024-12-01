@@ -333,7 +333,7 @@ void* send_hello_packet(void* arg) {
   ip_hdr->ip_hl = 5;
   ip_hdr->ip_len = htons(sizeof(sr_ip_hdr_t) + sizeof(ospfv2_hdr_t) + sizeof(ospfv2_hello_hdr_t));
   ip_hdr->ip_p = ip_protocol_ospfv2;
-  ip_hdr->ip_dst = OSPF_AllSPFRouters;
+  ip_hdr->ip_dst = htonl(OSPF_AllSPFRouters);
   ip_hdr->ip_src = hello_param->interface->ip;
   ip_hdr->ip_off = htons(IP_DF);
   ip_hdr->ip_ttl = 64;
@@ -347,7 +347,7 @@ void* send_hello_packet(void* arg) {
   ospf_hdr->type = OSPF_TYPE_HELLO;
   ospf_hdr->len = htons(res_len);
   ospf_hdr->rid = g_router_id.s_addr;
-  ospf_hello_hdr->nmask = htons(hello_param->interface->mask);
+  ospf_hello_hdr->nmask = hello_param->interface->mask;
   ospf_hello_hdr->helloint = OSPF_DEFAULT_HELLOINT;
   ospf_hdr->csum = ospfv2_cksum(ospf_hdr, res_len);
 
