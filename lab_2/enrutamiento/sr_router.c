@@ -113,7 +113,7 @@ void sr_send_icmp_error_packet (
    * */
   sr_ip_hdr_t * packet_ip = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   memcpy ((uint8_t *)packet_ip, ipPacket, sizeof(sr_ip_hdr_t));
-  packet_ip->ip_ttl = 32;
+  packet_ip->ip_ttl = 64;
   packet_ip->ip_src = mine_interface->ip; 
   packet_ip->ip_dst = ipDst;
   packet_ip->ip_sum = ip_cksum ((sr_ip_hdr_t *)packet_ip, sizeof(sr_ip_hdr_t));
@@ -160,12 +160,6 @@ void sr_send_icmp_error_packet (
 
     printf("#### -> Packet Sent.\n");
     
-    printf("### -> Packet Info:\n");
-    print_hdr_eth(packet);
-    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-    printf("--------------------------------------\n");
-
     free(entrada_cache);
 
   /* NO se conoce la MAC. 
@@ -181,13 +175,13 @@ void sr_send_icmp_error_packet (
       mine_interface->name
     );
 
-    printf("### -> Packet Info:\n");
-    print_hdr_eth(packet);
-    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-
     handle_arpreq (sr, req);
   }
+
+  printf("### -> Packet Info:\n");
+  print_hdr_eth(packet);
+  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+  print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
 
   free(packet);
 } /* -- sr_send_icmp_error_packet -- */
