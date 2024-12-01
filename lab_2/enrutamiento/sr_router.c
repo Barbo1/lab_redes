@@ -132,6 +132,8 @@ void sr_send_icmp_error_packet (
   print_hdr_eth(packet);
   print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
   print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  
+  assert (1 == 2);
 
   /* envio del paquete.
    * */
