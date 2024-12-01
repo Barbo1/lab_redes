@@ -116,7 +116,7 @@ void sr_send_icmp_error_packet (
   packet_ip->ip_ttl = 64;
   packet_ip->ip_src = mine_interface->ip; 
   packet_ip->ip_dst = ipDst;
-  packet_ip->ip_sum = ip_cksum ((sr_ip_hdr_t *)packet_ip, sizeof(sr_ip_hdr_t));
+  packet_ip->ip_sum = ip_cksum (packet_ip, sizeof(sr_ip_hdr_t));
 
   /* Headers de icmp. 
    * */
@@ -126,7 +126,7 @@ void sr_send_icmp_error_packet (
   packet_icmp->icmp_sum = 0;
   packet_icmp->next_mtu = 0;
   packet_icmp->unused = 0;
-  memcpy (packet_icmp->data, ipPacket, sizeof (sr_ip_hdr_t) + 8);
+  memcpy (packet_icmp->data, ipPacket, ICMP_DATA_SIZE);
   packet_icmp->icmp_sum = icmp3_cksum (packet_icmp, sizeof (sr_icmp_t3_hdr_t));
 
   print_hdr_eth(packet);
@@ -210,10 +210,10 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
    * */
   sr_ip_hdr_t * packet_ip = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
   memcpy ((uint8_t *)packet_ip, ipPacket, sizeof(sr_ip_hdr_t));
-  packet_ip->ip_ttl = 32;
+  packet_ip->ip_ttl = 64;
   packet_ip->ip_src = mine_interface->ip; 
   packet_ip->ip_dst = ipDst;
-  packet_ip->ip_sum = ip_cksum ((sr_ip_hdr_t *)packet_ip, sizeof(sr_ip_hdr_t));
+  packet_ip->ip_sum = ip_cksum (packet_ip, sizeof(sr_ip_hdr_t));
 
   /* Headers de icmp. */
   sr_icmp_hdr_t * packet_icmp = (sr_icmp_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -394,10 +394,10 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   printf("#### -> Constructing the packet.\n");
 
   /* Creacion del paquete para el envio. */
-  uint8_t * new_packet = (uint8_t *)malloc(sizeof(uint8_t) * len);
+  uint8_t * new_packet = (uint8_t *)malloc(len);
   sr_ethernet_hdr_t * new_packet_header_part_ether = (sr_ethernet_hdr_t *) new_packet;
   sr_ip_hdr_t * new_packet_header_part_ip = (sr_ip_hdr_t *) (new_packet + sizeof(sr_ethernet_hdr_t));
-  memcpy(new_packet, packet, sizeof(uint8_t) * len);
+  memcpy(new_packet, packet, len);
 
   new_packet_header_part_ether->ether_type = eHdr->ether_type;
   new_packet_header_part_ip->ip_ttl = ttl;

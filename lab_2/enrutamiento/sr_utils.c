@@ -86,6 +86,8 @@ int is_packet_valid(uint8_t *packet /* lent */,
 
     if (len >= cumulative_sz) {
       printf("***** -> Packet length is correct.\n");
+      printf("***** -> sum de paquete: %d\n", ipHdr->ip_sum);
+      printf("***** -> sum calculado: %d\n", ip_cksum(ipHdr, sizeof(sr_ip_hdr_t)));
       if (ip_cksum(ipHdr, sizeof(sr_ip_hdr_t)) == ipHdr->ip_sum) {
         printf("***** -> IP packet checksum is correct.\n");
         if (ipHdr->ip_p == ip_protocol_icmp) {

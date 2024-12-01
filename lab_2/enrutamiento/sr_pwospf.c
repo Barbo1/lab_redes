@@ -507,10 +507,10 @@ void* send_lsu(void* arg) {
     printf("#### -> MAC not found\n");
 
     struct sr_arpreq * req = sr_arpcache_queuereq (
-      &(lsu_param->sr->cache), 
+      &(lsu_param->sr->cache),
       ipDst,
-      packet, 
-      len, 
+      packet,
+      len,
       lsu_param->interface->name
     );
     handle_arpreq (lsu_param->sr, req);
