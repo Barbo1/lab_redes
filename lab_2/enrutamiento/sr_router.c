@@ -293,8 +293,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   print_hdr_ip(packet + sizeof (sr_ethernet_hdr_t));
 
   /* El TLL no es el adecuado. */
-  uint8_t ttl = ip_headers->ip_ttl - 1;
-  if (ttl <= 0) {
+  if (ip_headers->ip_ttl-- <= 0) {
     printf("#### -> Insuficient TTL. Sending a ICMP error: 'time to live exceeded'.\n");
 
     sr_send_icmp_error_packet (
@@ -386,22 +385,20 @@ void sr_handle_ip_packet(struct sr_instance *sr,
       packet + sizeof (sr_ethernet_hdr_t)
     );
   }
-    
-  printf("#### -> Found a match in the forwarding table.\n");
-  sr_print_routing_entry(matched_rt);
+  pthread_mutex_unlock(&sr->ospf_subsys->lock);
   
   uint32_t next_hop_ip = matched_rt->gw.s_addr;
-  printf("#### -> Constructing the packet.\n");
 
   /* Creacion del paquete para el envio. */
+  printf("#### -> Constructing the packet.\n");
+
   uint8_t * new_packet = (uint8_t *)malloc(len);
   sr_ethernet_hdr_t * new_packet_header_part_ether = (sr_ethernet_hdr_t *) new_packet;
   sr_ip_hdr_t * new_packet_header_part_ip = (sr_ip_hdr_t *) (new_packet + sizeof(sr_ethernet_hdr_t));
   memcpy(new_packet, packet, len);
 
   new_packet_header_part_ether->ether_type = eHdr->ether_type;
-  new_packet_header_part_ip->ip_ttl = ttl;
-  new_packet_header_part_ip->ip_sum = ip_cksum (new_packet_header_part_ip, sizeof (sr_ip_hdr_t));
+  new_packet_header_part_ip->ip_sum = ip_cksum(new_packet_header_part_ip, sizeof(sr_ip_hdr_t));
   
   print_hdr_eth(new_packet);
   print_hdr_ip(new_packet + sizeof(sr_ethernet_hdr_t));
@@ -443,7 +440,6 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   }
 
   free(new_packet);
-  pthread_mutex_unlock(&sr->ospf_subsys->lock);
 
   return;
 }
