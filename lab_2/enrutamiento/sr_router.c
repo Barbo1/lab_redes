@@ -129,10 +129,6 @@ void sr_send_icmp_error_packet (
   memcpy (packet_icmp->data, ipPacket, ICMP_DATA_SIZE);
   packet_icmp->icmp_sum = icmp3_cksum (packet_icmp, sizeof (sr_icmp_t3_hdr_t));
 
-  print_hdr_eth(packet);
-  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-  print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-
   if (mine_interface->ip == ipDst) {
     assert(1 == 2);
   }
@@ -141,32 +137,20 @@ void sr_send_icmp_error_packet (
    * */
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), matched_rt->gw.s_addr);
 
-  /* Se conoce la MAC. 
-   * */
   if (entrada_cache) {
-    printf("#### -> Found MAC in the cache\n");
-
     memcpy (packet_ether->ether_shost, mine_interface->addr, ETHER_ADDR_LEN);
     memcpy (packet_ether->ether_dhost, (uint8_t *)entrada_cache->mac, ETHER_ADDR_LEN);
 
-    /* envio del paquete.
-     * */
     sr_send_packet (
       sr, 
       packet, 
       packet_size, 
       mine_interface->name
     );
-
-    printf("#### -> Packet Sent.\n");
     
     free(entrada_cache);
 
-  /* NO se conoce la MAC. 
-   * */
   } else {
-    printf("#### -> MAC not found\n");
-
     struct sr_arpreq * req = sr_arpcache_queuereq (
       &(sr->cache), 
       matched_rt->gw.s_addr, 
@@ -225,16 +209,10 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
    * */
   struct sr_arpentry * entrada_cache = sr_arpcache_lookup (&(sr->cache), matched_rt->gw.s_addr);
 
-  /* Se conoce la MAC. 
-   * */
   if (entrada_cache) {
-    printf("#### -> Found MAC in the cache\n");
-
     memcpy (packet_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
     memcpy (packet_ether->ether_shost, (uint8_t *)mine_interface->addr, ETHER_ADDR_LEN);
 
-    /* envio del paquete.
-     * */
     sr_send_packet (
       sr, 
       packet, 
@@ -242,21 +220,9 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
       mine_interface->name
     );
 
-    printf("#### -> Packet Sent.\n");
-    
-    printf("### -> Packet Info:\n");
-    print_hdr_eth(packet);
-    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-    printf("--------------------------------------\n");
-
     free(entrada_cache);
 
-  /* NO se conoce la MAC. 
-   * */
   } else {
-    printf("#### -> MAC not found\n");
-
     struct sr_arpreq * req = sr_arpcache_queuereq (
       &(sr->cache), 
       matched_rt->gw.s_addr, 
@@ -265,12 +231,14 @@ void sr_send_icmp_echo_message (uint8_t type, uint8_t code, struct sr_instance *
       mine_interface->name
     );
 
-    print_hdr_eth(packet);
-    print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
-    print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-
     handle_arpreq (sr, req);
   }
+
+  printf("#### -> Packet Sent.\n");
+  print_hdr_eth(packet);
+  print_hdr_ip(packet + sizeof(sr_ethernet_hdr_t));
+  print_hdr_icmp(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+  printf("--------------------------------------\n");
 
   free(packet);
 }
@@ -344,12 +312,13 @@ void sr_handle_ip_packet(struct sr_instance *sr,
           len, 
           sr_get_interface(sr, interface)
         );
-
+        
         return;
       }
     }
-    printf("##### -> Its NOT a recognized packet.\n");
-    return; /* discard packet PREGUNTAR */
+
+    printf("##### -> Its NOT a recognized packet. the protocol number is %d\n", ip_headers->ip_p);
+    return;
   }
 
   /* el paquete que llego es ospf. */
@@ -408,8 +377,6 @@ void sr_handle_ip_packet(struct sr_instance *sr,
 
   /* Se conoce la MAC. */
   if (entrada_cache) {
-    printf("#### -> Found MAC in the cache.\n");
-
     memcpy(new_packet_header_part_ether->ether_dhost, entrada_cache->mac, ETHER_ADDR_LEN);
     memcpy(new_packet_header_part_ether->ether_shost, out_interface->addr, ETHER_ADDR_LEN);
 
@@ -426,8 +393,6 @@ void sr_handle_ip_packet(struct sr_instance *sr,
 
   /* NO se conoce la MAC. */
   } else {
-    printf("#### -> MAC not found.\n");
-
     struct sr_arpreq * req = sr_arpcache_queuereq(
       &(sr->cache), 
       next_hop_ip, 
