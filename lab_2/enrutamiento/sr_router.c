@@ -293,7 +293,7 @@ void sr_handle_ip_packet(struct sr_instance *sr,
   print_hdr_ip(packet + sizeof (sr_ethernet_hdr_t));
 
   /* El TLL no es el adecuado. */
-  if (ip_headers->ip_ttl-- <= 0) {
+  if (--ip_headers->ip_ttl <= 0) {
     printf("#### -> Insuficient TTL. Sending a ICMP error: 'time to live exceeded'.\n");
 
     sr_send_icmp_error_packet (

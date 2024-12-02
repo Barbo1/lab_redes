@@ -239,10 +239,6 @@ void* check_topology_entries_age(void* arg) {
 
   while(1) {
     usleep(1000000);
-    
-    printf("\n->-->>--->>>---->>>>----->>>>>>");
-    printf("\n->-->>--->>> Se ejecuta topology.");
-    printf("\n->-->>--->>>---->>>>----->>>>>>\n");
 
     pwospf_lock(sr->ospf_subsys);
 
@@ -681,6 +677,7 @@ void* sr_handle_pwospf_lsu_packet(void* arg) {
       sr_ip_hdr_t * ip_hdr_new = (sr_ip_hdr_t *)(packet + sizeof(sr_ethernet_hdr_t));
       ip_hdr_new->ip_src = elem->ip;
       ip_hdr_new->ip_dst = ipDst;
+      ip_hdr_new->ip_sum = ip_cksum(ip_hdr_new, sizeof(sr_ip_hdr_t));
 
       pwospf_lock(rx_lsu_param->sr->ospf_subsys);
 
